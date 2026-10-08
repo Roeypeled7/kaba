@@ -30,16 +30,9 @@ function connect(): Connection {
     for (const l of listeners) l(s);
   };
 
-  if (c.shared) {
-    const worker = new SharedWorker(new URL('./engine.worker.ts', import.meta.url), { type: 'module', name: 'kaba-engine' });
-    worker.port.onmessage = (ev) => {
-      if (ev.data.type === 'state') publish(ev.data.state);
-    };
-    worker.port.start();
-    c.send = (cmd) => worker.port.postMessage({ type: 'cmd', cmd });
-    window.addEventListener('pagehide', () => worker.port.postMessage({ type: 'bye' }));
-  } else {
-    // דפדפן בלי SharedWorker — מנוע מקומי, ללא סנכרון בין חלונות
+  // מנוע מקומי — לדפדפן בלי SharedWorker, או כשה-worker לא עולה. אין סנכרון בין חלונות.
+  const startLocal = () => {
+    c.shared = false;
     const engine = new Engine();
     engine.subscribe((s) => publish(structuredClone(s)));
     let last = performance.now();
@@ -50,6 +43,30 @@ function connect(): Connection {
     }, 400);
     c.send = (cmd) => engine.apply(cmd);
     publish(structuredClone(engine.state));
+  };
+
+  if (!c.shared) {
+    startLocal();
+    return c;
+  }
+  try {
+    const worker = new SharedWorker(new URL('./engine.worker.ts', import.meta.url), { type: 'module', name: 'kaba-engine' });
+    const fallback = () => {
+      if (!c.latest) {
+        console.warn('SharedWorker לא עלה — עובר למנוע מקומי ללא סנכרון');
+        startLocal();
+      }
+    };
+    worker.onerror = fallback;
+    setTimeout(fallback, 4000);
+    worker.port.onmessage = (ev) => {
+      if (ev.data.type === 'state' && c.shared) publish(ev.data.state);
+    };
+    worker.port.start();
+    c.send = (cmd) => worker.port.postMessage({ type: 'cmd', cmd });
+    window.addEventListener('pagehide', () => worker.port.postMessage({ type: 'bye' }));
+  } catch {
+    startLocal();
   }
   return c;
 }

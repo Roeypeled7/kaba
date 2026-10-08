@@ -1,11 +1,12 @@
+import { HOSPITALS } from './geo';
 import { INCIDENT_TYPE } from './config';
 import type { Assignment, LatLng, SimState, Station, TeamId, UnitType, Vehicle } from './model';
 
 export type Need = Partial<Record<UnitType, number>>;
 
-export const DISTRICT_OFFICER_ID = 'C01';
-const TEAM_UNITS: UnitType[] = ['engine', 'tanker', 'rescue'];
-const SHARED_UNITS: UnitType[] = ['tanker', 'rescue'];
+/** יחידות עצמאיות (מחוץ לסבב הצוותים) שנבחרות לפי הרכב הזמין הקרוב */
+const INDEPENDENT_UNITS: UnitType[] = ['ladder', 'tanker'];
+const DEFAULT_ORDER: TeamId[] = ['א', 'ב'];
 
 export function distKm(a: LatLng, b: LatLng): number {
   const R = 6371;
@@ -15,7 +16,20 @@ export function distKm(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export const otherTeam = (t: TeamId): TeamId => (t === 'א' ? 'ב' : 'א');
+/** התחנה הראשית שתחנה שייכת אליה (לתחנה ראשית — היא עצמה). קובע את ערוץ הקשר. */
+export const mainStationId = (s: { id: number; parentId: number | null }) => s.parentId ?? s.id;
+
+/** בית החולים הקרוב לנקודה */
+export function nearestHospital(pos: LatLng): { name: string; pos: LatLng } {
+  return HOSPITALS.reduce((best, h) => (distKm(h.pos, pos) < distKm(best.pos, pos) ? h : best));
+}
+
+/** הצוות הבא בסדר הצוותים של התחנה. בתחנה עם צוות אחד — אותו צוות. */
+export const otherTeam = (t: TeamId, order: TeamId[] = DEFAULT_ORDER): TeamId => {
+  const i = order.indexOf(t);
+  if (i < 0) return order[0] ?? t;
+  return order[(i + 1) % order.length];
+};
 
 /** דרישת כוחות לפי סוג אירוע וחומרה */
 export function requirement(typeKey: string, severity: number): Need {
@@ -25,21 +39,23 @@ export function requirement(typeKey: string, severity: number): Need {
   return out;
 }
 
-/** צוות נחשב בחוץ כל עוד רכב כלשהו שהוא מאייש לא חזר לזמינות */
+/** צוות נחשב בחוץ כל עוד רכב הכיבוי שהוא מאייש לא חזר לזמינות */
 export function teamBusy(vehicles: Vehicle[], stationId: number, team: TeamId): boolean {
   return vehicles.some(
-    (v) => v.stationId === stationId && v.type !== 'commander' && v.crewTeam === team && v.status !== 'available' && v.status !== 'offline',
+    (v) => v.stationId === stationId && v.type === 'engine' && v.crewTeam === team && v.status !== 'available' && v.status !== 'offline',
   );
 }
 
-/** סדר העדיפות של הצוותים לפי התור: הצוות שבתור, ואם הוא בחוץ — השני */
-export function teamCandidates(turnTeam: TeamId, busy: Set<TeamId>): TeamId[] {
-  return [turnTeam, otherTeam(turnTeam)].filter((t) => !busy.has(t));
+/** סדר העדיפות של הצוותים לפי התור: הצוות שבתור, ואחריו שאר הצוותים לפי סדר התחנה — בלי הצוותים שבחוץ */
+export function teamCandidates(turnTeam: TeamId, busy: Set<TeamId>, order: TeamId[] = DEFAULT_ORDER): TeamId[] {
+  const start = Math.max(0, order.indexOf(turnTeam));
+  const rotated = [...order.slice(start), ...order.slice(0, start)];
+  return rotated.filter((t) => !busy.has(t));
 }
 
-/** הצוות שבתור אחרי יציאה: יצא הצוות שבתור → התור עובר; יצא השני במקומו → התור נשאר */
-export function nextTurn(turnTeam: TeamId, dispatched: TeamId): TeamId {
-  return dispatched === turnTeam ? otherTeam(turnTeam) : turnTeam;
+/** הצוות שבתור אחרי יציאה: יצא הצוות שבתור → התור עובר; יצא אחר במקומו → התור נשאר */
+export function nextTurn(turnTeam: TeamId, dispatched: TeamId, order: TeamId[] = DEFAULT_ORDER): TeamId {
+  return dispatched === turnTeam ? otherTeam(turnTeam, order) : turnTeam;
 }
 
 export interface Recommendation {
@@ -48,75 +64,85 @@ export interface Recommendation {
 }
 
 /**
- * המלצת כוחות: תחנות לפי מרחק. סבב ראשון — צוות אחד מכל תחנה (פיזור עומס),
- * סבב שני — צוות נוסף מתחנות שעדיין יש בהן צוות פנוי. מפקדים לפי קרבה.
+ * המלצת כוחות:
+ * - רכבי כיבוי: תחנות (ראשיות ומשנה) לפי מרחק. סבב ראשון — צוות אחד מכל תחנה, סבב שני — צוותים נוספים.
+ * - מנוף/אשד: הרכב הזמין הקרוב (צוות עצמאי, מחוץ לסבב).
+ * - מפקד: 475 הקרוב, ואם אין — 41. חומרה 3 מוסיפה גם 41 הקרוב.
+ * @param incidentId אם ניתן — לא מוסיפים 41 בחומרה 3 כשכבר יש מפקד משמרת פעיל באירוע.
  */
-export function recommend(state: Pick<SimState, 'stations' | 'vehicles'>, pos: LatLng, needIn: Need, severity = 1): Recommendation {
+export function recommend(
+  state: Pick<SimState, 'stations' | 'vehicles'>,
+  pos: LatLng,
+  needIn: Need,
+  severity = 1,
+  incidentId?: string,
+): Recommendation {
   const need: Need = { ...needIn };
   const used = new Set<string>();
   const assignments: Assignment[] = [];
   const avail = (v: Vehicle) => v.status === 'available' && !used.has(v.id);
+  const byDist = (a: Vehicle, b: Vehicle) => distKm(a.pos, pos) - distKm(b.pos, pos);
+  const take = (v: Vehicle, team: TeamId | null, countAs?: UnitType) => {
+    used.add(v.id);
+    if (countAs) need[countAs] = (need[countAs] ?? 0) - 1;
+    assignments.push({ vehicleId: v.id, stationId: v.stationId, team });
+  };
 
+  // רכבי כיבוי — לפי סבב הצוותים
   const busy = new Map<number, Set<TeamId>>();
   const turn = new Map<number, TeamId>();
   for (const st of state.stations) {
-    busy.set(st.id, new Set((['א', 'ב'] as TeamId[]).filter((t) => teamBusy(state.vehicles, st.id, t))));
+    busy.set(st.id, new Set(st.teamOrder.filter((t) => teamBusy(state.vehicles, st.id, t))));
     turn.set(st.id, st.turnTeam);
   }
   const stations = [...state.stations].sort((a, b) => distKm(a.pos, pos) - distKm(b.pos, pos));
-  const teamNeedLeft = () => TEAM_UNITS.some((t) => (need[t] ?? 0) > 0);
+  const engineNeedLeft = () => (need.engine ?? 0) > 0;
 
   const tryStation = (st: Station): boolean => {
-    for (const team of teamCandidates(turn.get(st.id)!, busy.get(st.id)!)) {
-      const contrib: Vehicle[] = [];
-      if ((need.engine ?? 0) > 0) {
-        const eng = state.vehicles.find((v) => v.stationId === st.id && v.type === 'engine' && v.homeTeam === team && avail(v));
-        if (eng) contrib.push(eng);
-      }
-      for (const t of SHARED_UNITS) {
-        if ((need[t] ?? 0) <= 0) continue;
-        const sv = state.vehicles.find((v) => v.stationId === st.id && v.type === t && avail(v));
-        if (sv) contrib.push(sv);
-      }
-      if (!contrib.length) continue;
-      for (const v of contrib) {
-        used.add(v.id);
-        need[v.type] = (need[v.type] ?? 0) - 1;
-        assignments.push({ vehicleId: v.id, stationId: st.id, team });
-      }
+    for (const team of teamCandidates(turn.get(st.id)!, busy.get(st.id)!, st.teamOrder)) {
+      const eng = state.vehicles.find((v) => v.stationId === st.id && v.type === 'engine' && v.homeTeam === team && avail(v));
+      if (!eng) continue;
+      take(eng, team, 'engine');
       busy.get(st.id)!.add(team);
-      turn.set(st.id, nextTurn(turn.get(st.id)!, team));
+      turn.set(st.id, nextTurn(turn.get(st.id)!, team, st.teamOrder));
       return true;
     }
     return false;
   };
 
   for (const st of stations) {
-    if (!teamNeedLeft()) break;
+    if (!engineNeedLeft()) break;
     tryStation(st);
   }
   for (const st of stations) {
-    while (teamNeedLeft() && tryStation(st));
+    while (engineNeedLeft() && tryStation(st));
   }
 
-  // מפקדים
-  const commanders = state.vehicles
-    .filter((v) => v.type === 'commander' && avail(v))
-    .sort((a, b) => distKm(a.pos, pos) - distKm(b.pos, pos));
-  if (severity >= 3) {
-    const dist = commanders.find((v) => v.id === DISTRICT_OFFICER_ID);
-    if (dist) {
-      used.add(dist.id);
-      assignments.push({ vehicleId: dist.id, stationId: dist.stationId, team: null });
+  // מנוף / אשד — הקרוב הזמין
+  for (const t of INDEPENDENT_UNITS) {
+    const pool = state.vehicles.filter((v) => v.type === t && avail(v)).sort(byDist);
+    for (const v of pool) {
+      if ((need[t] ?? 0) <= 0) break;
+      take(v, null, t);
     }
   }
-  const stationCmd = [...commanders.filter((v) => v.id !== DISTRICT_OFFICER_ID), ...commanders.filter((v) => v.id === DISTRICT_OFFICER_ID)];
-  for (const c of stationCmd) {
+
+  // מפקדים: סגן מפקד משמרת קודם, אחריו מפקד משמרת
+  const commanders = state.vehicles.filter((v) => v.type === 'commander' && avail(v)).sort(byDist);
+  const ordered = [...commanders.filter((v) => v.role === 'deputy'), ...commanders.filter((v) => v.role !== 'deputy')];
+  for (const c of ordered) {
     if ((need.commander ?? 0) <= 0) break;
-    if (!avail(c)) continue;
-    used.add(c.id);
-    need.commander = (need.commander ?? 0) - 1;
-    assignments.push({ vehicleId: c.id, stationId: c.stationId, team: null });
+    take(c, null, 'commander');
+  }
+  if (severity >= 3) {
+    const shiftOnIncident =
+      incidentId !== undefined &&
+      state.vehicles.some((v) => v.incidentId === incidentId && v.role === 'shift' && v.status !== 'available' && v.status !== 'returning');
+    const alreadyPicked = assignments.some((a) => state.vehicles.find((v) => v.id === a.vehicleId)?.role === 'shift');
+    if (!shiftOnIncident && !alreadyPicked) {
+      const shift = commanders.find((v) => v.role === 'shift' && avail(v));
+      if (shift) take(shift, null);
+    }
   }
 
   const shortage: Need = {};
@@ -124,31 +150,12 @@ export function recommend(state: Pick<SimState, 'stations' | 'vehicles'>, pos: L
   return { assignments, shortage };
 }
 
-/** שיוך צוותים לבחירה ידנית של רכבים (ללא המלצה) */
+/** שיוך צוותים לבחירה ידנית של רכבים: רכב כיבוי — הצוות שלו; כל השאר — צוות עצמאי (null) */
 export function assignTeams(state: Pick<SimState, 'stations' | 'vehicles'>, vehicleIds: string[]): Assignment[] {
-  const out: Assignment[] = [];
-  const chosen = new Map<number, TeamId>();
-  const vs = vehicleIds.map((id) => state.vehicles.find((v) => v.id === id)!).filter(Boolean);
-  for (const v of vs.filter((v) => v.type === 'engine')) {
-    out.push({ vehicleId: v.id, stationId: v.stationId, team: v.homeTeam });
-    if (!chosen.has(v.stationId) && v.homeTeam) chosen.set(v.stationId, v.homeTeam);
-  }
-  for (const v of vs.filter((v) => v.type !== 'engine')) {
-    if (v.type === 'commander') {
-      out.push({ vehicleId: v.id, stationId: v.stationId, team: null });
-      continue;
-    }
-    let team = chosen.get(v.stationId);
-    if (!team) {
-      const st = state.stations.find((s) => s.id === v.stationId)!;
-      const busy = new Set((['א', 'ב'] as TeamId[]).filter((t) => teamBusy(state.vehicles, st.id, t)));
-      team = teamCandidates(st.turnTeam, busy)[0];
-      if (!team) continue;
-      chosen.set(v.stationId, team);
-    }
-    out.push({ vehicleId: v.id, stationId: v.stationId, team });
-  }
-  return out;
+  return vehicleIds
+    .map((id) => state.vehicles.find((v) => v.id === id))
+    .filter((v): v is Vehicle => !!v)
+    .map((v) => ({ vehicleId: v.id, stationId: v.stationId, team: v.type === 'engine' ? v.homeTeam : null }));
 }
 
 /** החלת רוטציה על התחנות לפי סדר היציאות בהזנקה */
@@ -160,7 +167,7 @@ export function applyRotation(stations: Station[], assignments: Assignment[]): v
     if (seen.has(key)) continue;
     seen.add(key);
     const st = stations.find((s) => s.id === a.stationId);
-    if (st) st.turnTeam = nextTurn(st.turnTeam, a.team);
+    if (st) st.turnTeam = nextTurn(st.turnTeam, a.team, st.teamOrder);
   }
 }
 

@@ -24,15 +24,19 @@ function icon(key: string, html: string, size: [number, number], anchor?: [numbe
   return i;
 }
 
-const TYPE_GLYPH: Record<Vehicle['type'], string> = { engine: '▲', tanker: '■', rescue: '✦', commander: '★' };
+const TYPE_GLYPH: Record<Vehicle['type'], string> = { engine: '▲', ladder: '⇡', tanker: '■', commander: '★' };
 
 export function vehicleIcon(v: Vehicle) {
-  const short = v.callsign.replace(/^[^\d]*\s/, '');
-  return icon(`v:${v.id}:${v.status}`, `<div class="mk-veh st-${v.status}"><b>${TYPE_GLYPH[v.type]}</b>${short}</div>`, [52, 20]);
+  return icon(`v:${v.id}:${v.status}`, `<div class="mk-veh st-${v.status}"><b>${TYPE_GLYPH[v.type]}</b>${v.unit}</div>`, [52, 20]);
 }
 
-export function stationIcon(st: Station) {
-  return icon(`s:${st.id}`, `<div class="mk-station"><span>🚒</span>${st.name.replace('תחנת ', '')}</div>`, [96, 26]);
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** תחנה ראשית — בולטת; תחנת משנה — נקודה קטנה ושם עמום. התווית ממורכזת על הנקודה בלי תלות ברוחב השם. */
+export function stationIcon(st: Station, short: string) {
+  if (st.parentId === null)
+    return icon(`s:${st.id}`, `<div class="mk-station"><span>🚒</span>${esc(short)}</div>`, [0, 0], [0, 0]);
+  return icon(`s:${st.id}`, `<div class="mk-sub"><i></i><span>${esc(short)}</span></div>`, [0, 0], [0, 0]);
 }
 
 export function incidentIcon(inc: Incident, selected = false) {
@@ -45,7 +49,7 @@ export function ambulanceIcon(a: Ambulance) {
   return icon(`a:${a.id}:${a.status}`, `<div class="mk-amb amb-${a.status}"><b>✚</b>${short}</div>`, [58, 20]);
 }
 
-export const hospitalIcon = () => icon('hospital', `<div class="mk-hosp">H</div>`, [24, 24]);
+export const hospitalIcon = () => icon('hospital', `<div class="mk-hosp">H</div>`, [18, 18]);
 export const pinIcon = () => icon('pin', `<div class="mk-pin"></div>`, [22, 22]);
 
 /** מזיז את המפה כשהמרכז משתנה */
@@ -54,5 +58,16 @@ export function FlyTo({ pos, zoom }: { pos: LatLng | null; zoom?: number }) {
   useEffect(() => {
     if (pos) map.flyTo([pos.lat, pos.lng], zoom ?? map.getZoom(), { duration: 0.6 });
   }, [pos?.lat, pos?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
+/** פותח במרכז/זום של הקונפיג, ואם נקודות המחוז לא נכנסות במסך — מתרחק עד שכולן נראות */
+export function FitDistrict({ points }: { points: LatLng[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!points.length) return;
+    const b = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]));
+    if (!map.getBounds().contains(b)) map.fitBounds(b, { padding: [24, 24], animate: false });
+  }, [points.length]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }

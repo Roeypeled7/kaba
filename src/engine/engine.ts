@@ -1,7 +1,7 @@
 import { AMBULANCE_SPEED_KMH, DEFAULT_SPEED, DISTRICT, INCIDENT_TYPE, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
-import { DISTRICT_OFFICER_ID, applyRotation, assignTeams, distKm, needDelta, recommend, requirement, type Need } from './dispatch';
+import { applyRotation, assignTeams, distKm, mainStationId, nearestHospital, needDelta, recommend, requirement, type Need } from './dispatch';
 import { etaMin, makeCall, moveToward, nextCallDelayMs } from './simulation';
-import type { Ambulance, Assignment, ChannelId, Command, Incident, SimState, Vehicle } from './model';
+import type { Ambulance, Assignment, ChannelId, Command, Incident, SimState, Station, Vehicle } from './model';
 
 const MAX_RADIO = 400;
 const MAX_CALLS = 6;
@@ -67,8 +67,16 @@ export class Engine {
   station(id: number) {
     return this.state.stations.find((s) => s.id === id)!;
   }
+  /** ערוץ הקשר של תחנה — תמיד הערוץ של התחנה הראשית */
+  private stationChannel(st: Station): ChannelId {
+    return `st${mainStationId(st)}`;
+  }
   private channelOf(v: Vehicle): ChannelId {
-    return v.id === DISTRICT_OFFICER_ID ? 'district' : `st${v.stationId}`;
+    return this.stationChannel(this.station(v.stationId));
+  }
+  /** בית החולים שאליו מפנה אמבולנס — הקרוב לזירה (או לאמבולנס, אם אין אירוע) */
+  private hospitalFor(a: Ambulance) {
+    return nearestHospital(this.incident(a.incidentId)?.pos ?? a.pos);
   }
   private radio(channel: ChannelId, from: string, to: string, text: string, incidentId?: string, outgoing = false) {
     this.state.radio.push({ id: this.nextId(), t: this.now, channel, from, to, text, incidentId, outgoing });
@@ -107,7 +115,6 @@ export class Engine {
     for (const [stationId, list] of byStation) {
       const st = this.station(stationId);
       const team = list.find((a) => a.team)?.team ?? null;
-      const teams = [...new Set(list.map((a) => a.team).filter(Boolean))].join(' + ');
       this.state.dispatches.push({
         id: `D${this.nextId()}`,
         stationId,
@@ -118,7 +125,7 @@ export class Engine {
         ack: false,
       });
       const signs = list.map((a) => this.vehicle(a.vehicleId)!.callsign).join(', ');
-      this.radio(`st${stationId}`, 'מוקד', st.name, `הזנקה! ${this.label(inc)} — ${inc.address}. כוחות: ${signs}${teams ? ` · צוות ${teams}` : ''}`, inc.id, true);
+      this.radio(this.stationChannel(st), 'מוקד', st.name, `הזנקה! ${this.label(inc)} — ${inc.address}. כוחות: ${signs}`, inc.id, true);
     }
     const allSigns = assignments.map((a) => this.vehicle(a.vehicleId)!.callsign).join(', ');
     this.radio('district', 'מוקד', 'כל התחנות', `אירוע ${inc.id} · ${this.label(inc)}, ${inc.address} — הוזנקו: ${allSigns}`, inc.id, true);
@@ -131,7 +138,7 @@ export class Engine {
   }
 
   private autoDispatch(inc: Incident, need: Need) {
-    const rec = recommend(this.state, inc.pos, need, inc.severity);
+    const rec = recommend(this.state, inc.pos, need, inc.severity, inc.id);
     this.dispatch(inc, rec.assignments);
     const missing = Object.entries(rec.shortage) as [keyof typeof UNIT_LABEL, number][];
     if (missing.length) {
@@ -339,9 +346,9 @@ export class Engine {
       }
       case 'setTurnTeam': {
         const st = this.station(cmd.stationId);
-        if (st.turnTeam !== cmd.team) {
+        if (st && st.teamOrder.includes(cmd.team) && st.turnTeam !== cmd.team) {
           st.turnTeam = cmd.team;
-          this.radio(`st${st.id}`, st.name, 'מוקד', `התור הועבר ידנית לצוות ${cmd.team}`);
+          this.radio(this.stationChannel(st), st.name, 'מוקד', `התור הועבר ידנית לצוות ${st.teams[cmd.team]?.unit ?? cmd.team}`);
         }
         break;
       }
@@ -350,7 +357,7 @@ export class Engine {
         const v = s.vehicles.find((x) => x.callsign === cmd.to);
         const st = s.stations.find((x) => x.name === cmd.to);
         if (v) this.schedule(rand(4, 9), this.channelOf(v), v.callsign, /דווח|מצב|עדכן/.test(cmd.text) ? this.statusReply(v) : 'רשמתי', cmd.incidentId);
-        else if (st) this.schedule(rand(3, 7), `st${st.id}`, st.name, 'קיבלתי', cmd.incidentId);
+        else if (st) this.schedule(rand(3, 7), this.stationChannel(st), st.name, 'קיבלתי', cmd.incidentId);
         else if (cmd.channel === 'mda') this.schedule(rand(5, 10), 'mda', 'מד״א', 'קיבלתי', cmd.incidentId);
         else if (cmd.channel === 'police') this.schedule(rand(5, 10), 'police', 'מוקד משטרה', 'קיבלתי', cmd.incidentId);
         break;
@@ -479,14 +486,20 @@ export class Engine {
           break;
         case 'onscene':
           if (now - a.statusSince >= TIMING.ambulanceOnScene * 1000) {
+            const h = this.hospitalFor(a);
             this.setStatus(a, 'transporting');
-            this.radio('mda', 'מד״א', 'מוקד כבאות', `${a.callsign} מפנה פצוע ל${DISTRICT.hospital.name}`, a.incidentId ?? undefined);
-            if (inc) this.log(inc, `${a.callsign} מפנה ל${DISTRICT.hospital.name}`);
+            this.radio('mda', 'מד״א', 'מוקד כבאות', `${a.callsign} מפנה פצוע ל${h.name}`, a.incidentId ?? undefined);
+            if (inc) this.log(inc, `${a.callsign} מפנה ל${h.name}`);
           }
           break;
-        case 'transporting':
-          if (moveToward(a.pos, DISTRICT.hospital.pos, AMBULANCE_SPEED_KMH, dt)) this.setStatus(a, 'returning');
+        case 'transporting': {
+          const h = this.hospitalFor(a);
+          if (moveToward(a.pos, h.pos, AMBULANCE_SPEED_KMH, dt)) {
+            this.setStatus(a, 'returning');
+            this.radio('mda', 'מד״א', 'מוקד כבאות', `${a.callsign} הגיע ל${h.name}`, a.incidentId ?? undefined);
+          }
           break;
+        }
         case 'returning':
           if (moveToward(a.pos, a.base, AMBULANCE_SPEED_KMH * 0.8, dt)) {
             this.setStatus(a, 'available');

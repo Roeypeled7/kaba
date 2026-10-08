@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { MapContainer, Marker, Polyline, Popup, Tooltip } from 'react-leaflet';
 import { AMB_STATUS_LABEL, DISTRICT, INCIDENT_TYPE, STATUS_LABEL } from '../engine/config';
+import { nearestHospital } from '../engine/dispatch';
 import type { Command, LatLng, SimState, VehicleStatus } from '../engine/model';
-import { DarkTiles, FlyTo, ambulanceIcon, hospitalIcon, incidentIcon, stationIcon, vehicleIcon } from '../components/mapkit';
-import { IncidentBadge, IncidentTitle, TopBar, UnitTag, fmtElapsed } from '../components/ui';
+import { DarkTiles, FitDistrict, FlyTo, ambulanceIcon, hospitalIcon, incidentIcon, stationIcon, vehicleIcon } from '../components/mapkit';
+import { IncidentBadge, IncidentTitle, TopBar, UnitTag, byUnit, fmtElapsed, stationShort, turnUnit } from '../components/ui';
 
 type Layers = { stations: boolean; vehicles: boolean; incidents: boolean; ambulances: boolean; lines: boolean; idle: boolean };
 const LAYER_LABEL: Record<keyof Layers, string> = {
@@ -27,27 +28,48 @@ export default function MapScreen({ state }: { state: SimState; send: (c: Comman
     <div className="screen map-screen">
       <TopBar state={state} title="מפת מצב מחוזית" accent="#06d6a0" />
       <div className="map-wrap">
-        <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={DISTRICT.zoom} preferCanvas>
+        <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={DISTRICT.zoom} zoomSnap={0.25} preferCanvas>
           <DarkTiles />
           <FlyTo pos={focus} zoom={15} />
-          <Marker position={[DISTRICT.hospital.pos.lat, DISTRICT.hospital.pos.lng]} icon={hospitalIcon()}>
-            <Tooltip direction="top">{DISTRICT.hospital.name}</Tooltip>
-          </Marker>
+          <FitDistrict points={state.stations.map((s) => s.pos)} />
+          {DISTRICT.hospitals.map((h) => (
+            <Marker key={h.name} position={[h.pos.lat, h.pos.lng]} icon={hospitalIcon()} zIndexOffset={-400}>
+              <Tooltip direction="top" offset={[0, -10]}>
+                {h.name}
+              </Tooltip>
+            </Marker>
+          ))}
           {layers.stations &&
-            state.stations.map((st) => (
-              <Marker key={st.id} position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st)} zIndexOffset={-100}>
-                <Popup>
-                  <b>{st.name}</b>
-                  <div>צוות בתור: {st.turnTeam}</div>
-                  <div>
-                    {state.vehicles
-                      .filter((v) => v.stationId === st.id)
-                      .map((v) => `${v.callsign} — ${STATUS_LABEL[v.status]}`)
-                      .join(' · ')}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+            state.stations.map((st) => {
+              const main = st.parentId === null;
+              return (
+                <Marker key={st.id} position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} zIndexOffset={main ? -100 : -200}>
+                  <Popup>
+                    <div className="map-pop">
+                      <b>{st.name}</b>
+                      {main ? (
+                        <div>
+                          בתור: <b className="mono">{turnUnit(st)}</b>
+                        </div>
+                      ) : (
+                        <div className="dim small">תחנת משנה של {state.stations.find((s) => s.id === st.parentId)?.name}</div>
+                      )}
+                      <div className="pop-vehs">
+                        {state.vehicles
+                          .filter((v) => v.stationId === st.id)
+                          .sort(byUnit)
+                          .map((v) => (
+                            <div key={v.id} className="pop-veh">
+                              <span className="mono">{v.unit}</span>
+                              <span className={`chip st-${v.status}`}>{STATUS_LABEL[v.status]}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
           {layers.lines &&
             state.vehicles
               .filter((v) => v.status === 'enroute' || v.status === 'returning')
@@ -69,7 +91,9 @@ export default function MapScreen({ state }: { state: SimState; send: (c: Comman
             state.ambulances
               .filter((a) => a.status === 'enroute' || a.status === 'transporting')
               .map((a) => {
-                const target = a.status === 'enroute' ? state.incidents.find((i) => i.id === a.incidentId)?.pos : DISTRICT.hospital.pos;
+                const inc = state.incidents.find((i) => i.id === a.incidentId);
+                // יעד הפינוי = בית החולים הקרוב לזירה (כמו במנוע); בלי אירוע — הקרוב לאמבולנס
+                const target = a.status === 'enroute' ? inc?.pos : nearestHospital(inc?.pos ?? a.pos).pos;
                 if (!target) return null;
                 return (
                   <Polyline
@@ -113,7 +137,7 @@ export default function MapScreen({ state }: { state: SimState; send: (c: Comman
               <Marker key={v.id} position={[v.pos.lat, v.pos.lng]} icon={vehicleIcon(v)} zIndexOffset={1000}>
                 <Tooltip direction="top" offset={[0, -10]}>
                   {v.callsign} · {STATUS_LABEL[v.status]}
-                  {v.crewTeam && v.type !== 'commander' ? ` · צוות ${v.crewTeam}` : ''}
+                  {v.crewName ? ` · ${v.crewName}` : ''}
                 </Tooltip>
               </Marker>
             ))}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { INCIDENT_TYPE } from '../engine/config';
 import type { ChannelId, Command, SimState } from '../engine/model';
-import { AmbChip, IncidentTitle, TopBar, fmtTime } from '../components/ui';
+import { AmbChip, IncidentTitle, TopBar, byUnit, fmtTime, mainStations, stationGroupIds, stationShort } from '../components/ui';
 import { playBlip } from '../sound';
 
 type Send = (c: Command) => void;
@@ -14,7 +14,7 @@ export default function Comms({ state, send }: { state: SimState; send: Send }) 
     () =>
       [
         { id: 'district' as ChannelId, name: 'מבצעי מחוזי' },
-        ...state.stations.map((s) => ({ id: `st${s.id}` as ChannelId, name: s.name.replace('תחנת ', 'תחנה — ') })),
+        ...mainStations(state.stations).map((s) => ({ id: `st${s.id}` as ChannelId, name: `תחנה — ${stationShort(s)}` })),
         { id: 'mda' as ChannelId, name: 'מד״א' },
         { id: 'police' as ChannelId, name: 'משטרה' },
       ] as { id: ChannelId; name: string }[],
@@ -50,10 +50,16 @@ export default function Comms({ state, send }: { state: SimState; send: Send }) 
   const targets = useMemo(() => {
     if (txChannel === 'mda') return ['מד״א'];
     if (txChannel === 'police') return ['מוקד משטרה'];
-    if (txChannel === 'district') return ['כל התחנות', ...state.vehicles.filter((v) => v.type === 'commander').map((v) => v.callsign), ...state.stations.map((s) => s.name)];
+    const mains = mainStations(state.stations);
+    if (txChannel === 'district') {
+      const cmd = (unit: string) => mains.flatMap((st) => state.vehicles.filter((v) => v.stationId === st.id && v.unit === unit).map((v) => v.callsign));
+      return ['כל התחנות', ...cmd('41'), ...cmd('475'), ...mains.map((s) => s.name)];
+    }
     const sid = Number(txChannel.slice(2));
-    const st = state.stations.find((s) => s.id === sid)!;
-    return [st.name, ...state.vehicles.filter((v) => v.stationId === sid && v.id !== 'C01').map((v) => v.callsign)];
+    const group = [...stationGroupIds(state.stations, sid)];
+    const names = group.map((id) => state.stations.find((s) => s.id === id)?.name).filter((n): n is string => !!n);
+    const units = group.flatMap((id) => state.vehicles.filter((v) => v.stationId === id).sort(byUnit).map((v) => v.callsign));
+    return [...names, ...units];
   }, [txChannel, state.vehicles, state.stations]);
   const target = targets.includes(to) ? to : targets[0];
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { AMB_STATUS_LABEL, CALL_RATE_LABEL, DISTRICT, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL } from '../engine/config';
-import type { Ambulance, CallRate, Command, Incident, SimState, Vehicle } from '../engine/model';
+import { AMB_STATUS_LABEL, CALL_RATE_LABEL, DISTRICT, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, ROLE_LABEL, STATUS_LABEL, UNIT_LABEL } from '../engine/config';
+import { STATIONS_GEO } from '../engine/geo';
+import type { Ambulance, CallRate, Command, Incident, SimState, Station, TeamId, Vehicle } from '../engine/model';
 import { unlockAudio, useAudioReady } from '../sound';
 
 export const fmtTime = (t: number) => new Date(t).toLocaleTimeString('he-IL', { hour12: false });
@@ -14,10 +15,73 @@ export function fmtElapsed(ms: number) {
 export const SCREENS = [
   { hash: '#/dispatch', title: 'קבלה ושיגור', short: 'שיגור' },
   { hash: '#/comms', title: 'מערכת קשר', short: 'קשר' },
-  { hash: '#/station/1', title: 'תחנה 1', short: 'תחנה 1' },
-  { hash: '#/station/2', title: 'תחנה 2', short: 'תחנה 2' },
+  { hash: '#/station/1', title: 'עמדות תחנה', short: 'תחנות' },
   { hash: '#/map', title: 'מפה', short: 'מפה' },
 ];
+
+const navOn = (hash: string) => (hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : location.hash === hash);
+
+/* ── מבנה המחוז ── */
+
+/** סדר התצוגה של רכבי תחנה ראשית */
+export const UNIT_ORDER = ['41', '475', '480', '490', '440', '406'];
+const unitRank = (v: Vehicle) => {
+  const i = UNIT_ORDER.indexOf(v.unit);
+  return i < 0 ? 99 : i;
+};
+export const byUnit = (a: Vehicle, b: Vehicle) => unitRank(a) - unitRank(b);
+
+export const STATION_ACCENT: Record<number, string> = {
+  1: '#ff6b35',
+  2: '#4cc9f0',
+  3: '#f72585',
+  4: '#ffd166',
+  5: '#06d6a0',
+  6: '#b388ff',
+};
+
+export const mainStations = (stations: Station[]) => stations.filter((s) => s.parentId === null).sort((a, b) => a.id - b.id);
+export const subStations = (stations: Station[], mainId: number) => stations.filter((s) => s.parentId === mainId).sort((a, b) => a.id - b.id);
+/** התחנה הראשית וכל תחנות המשנה שלה */
+export const stationGroupIds = (stations: Station[], mainId: number) => new Set([mainId, ...subStations(stations, mainId).map((s) => s.id)]);
+
+/** שם קצר: 'רחובות', 'יבנה' */
+export function stationShort(st: Station): string {
+  return STATIONS_GEO.find((g) => g.id === st.id)?.short ?? st.name.replace(/^תחנת\s*/, '');
+}
+
+/** מספר הרכב של הצוות שבתור: 440 / 406 */
+export const turnUnit = (st: Station) => st.teams[st.turnTeam]?.unit ?? st.turnTeam;
+export const teamUnit = (st: Station | undefined, team: TeamId | null) => (st && team ? st.teams[team]?.unit ?? team : null);
+
+/** צוות נחשב בחוץ כל עוד רכב שהוא מאייש לא חזר לזמינות */
+export function teamOut(vehicles: Vehicle[], stationId: number, team: TeamId): boolean {
+  return vehicles.some(
+    (v) => v.stationId === stationId && v.type !== 'commander' && v.crewTeam === team && v.status !== 'available' && v.status !== 'offline',
+  );
+}
+
+/** מה שמוצג בעמודת הצוות: תפקיד ושם למפקד, שם איש הצוות לשאר */
+export function crewLabel(v: Vehicle): string {
+  if (v.type === 'commander') return [v.role ? ROLE_LABEL[v.role] : UNIT_LABEL.commander, v.crewName].filter(Boolean).join(' · ');
+  return v.crewName ?? UNIT_LABEL[v.type];
+}
+
+/** בורר תחנה ראשית — מחליף את ה-hash */
+export function StationPicker({ state, current }: { state: SimState; current: number }) {
+  return (
+    <label className="station-picker">
+      <span>תחנה</span>
+      <select value={current} onChange={(e) => (location.hash = `#/station/${e.target.value}`)}>
+        {mainStations(state.stations).map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.id} · {stationShort(s)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export function TopBar({ state, title, accent, children }: { state: SimState; title: string; accent?: string; children?: ReactNode }) {
   return (
@@ -32,7 +96,7 @@ export function TopBar({ state, title, accent, children }: { state: SimState; ti
       <nav className="topnav">
         <a href="#/">⌂</a>
         {SCREENS.map((s) => (
-          <a key={s.hash} href={s.hash} className={location.hash === s.hash ? 'on' : ''}>
+          <a key={s.hash} href={s.hash} className={navOn(s.hash) ? 'on' : ''}>
             {s.short}
           </a>
         ))}
@@ -84,7 +148,6 @@ export function UnitTag({ v, onClick }: { v: Vehicle; onClick?: () => void }) {
   return (
     <span className={`unit-tag st-${v.status}`} onClick={onClick} title={STATUS_LABEL[v.status]}>
       {v.callsign}
-      {v.crewTeam && v.type !== 'commander' ? <small> · {v.crewTeam}</small> : null}
     </span>
   );
 }

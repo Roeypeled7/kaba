@@ -1,30 +1,36 @@
-import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate } from './model';
+import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate, CommanderRole, TeamId } from './model';
+import { ADDRESSES_GEO, DISTRICT_GEO, HOSPITALS, MDA_BASES, STATIONS_GEO } from './geo';
 
-/** כל המיקומים משוערים — לשינוי חופשי. */
+/** כל המיקומים מגיעים מ-geo.ts */
 export const DISTRICT = {
-  name: 'מחוז מרכז — גזרת השרון',
-  center: { lat: 32.176, lng: 34.885 } as LatLng,
-  zoom: 13,
-  hospital: { name: 'בי״ח מאיר', pos: { lat: 32.1797, lng: 34.8935 } as LatLng },
+  name: 'מחוז מרכז',
+  center: DISTRICT_GEO.center,
+  zoom: DISTRICT_GEO.zoom,
+  hospitals: HOSPITALS,
 };
 
 export const DEFAULT_SPEED = 5;
 
 export const UNIT_LABEL: Record<UnitType, string> = {
-  engine: 'רביעייה',
-  tanker: 'מיכלית',
-  rescue: 'רכב חילוץ',
+  engine: 'רכב כיבוי',
+  ladder: 'מנוף',
+  tanker: 'אשד',
   commander: 'מפקד',
 };
 
-/** מהירות ממוצעת בקמ״ש */
-export const UNIT_SPEED_KMH: Record<UnitType, number> = {
-  engine: 55,
-  tanker: 45,
-  rescue: 55,
-  commander: 75,
+export const ROLE_LABEL: Record<CommanderRole, string> = {
+  shift: 'מפקד משמרת',
+  deputy: 'סגן מפקד משמרת',
 };
-export const AMBULANCE_SPEED_KMH = 65;
+
+/** מהירות ממוצעת בקמ״ש (נסיעה בין־עירונית) */
+export const UNIT_SPEED_KMH: Record<UnitType, number> = {
+  engine: 70,
+  tanker: 60,
+  ladder: 55,
+  commander: 85,
+};
+export const AMBULANCE_SPEED_KMH = 75;
 
 /** זמני סימולציה (שניות) */
 export const TIMING = {
@@ -82,7 +88,7 @@ export const INCIDENT_TYPES: IncidentType[] = [
     key: 'structure',
     label: 'שריפת מבנה',
     icon: '🔥',
-    req: { engine: 2, tanker: 1, commander: 1 },
+    req: { engine: 2, ladder: 1, commander: 1 },
     perLevel: { engine: 1, tanker: 1 },
     workMin: 25,
     ambulance: false,
@@ -107,7 +113,7 @@ export const INCIDENT_TYPES: IncidentType[] = [
     label: 'שריפת קוצים / חורש',
     icon: '🌾',
     req: { engine: 1, tanker: 1 },
-    perLevel: { tanker: 1, engine: 1 },
+    perLevel: { engine: 1, tanker: 1 },
     workMin: 20,
     ambulance: false,
     police: false,
@@ -118,8 +124,8 @@ export const INCIDENT_TYPES: IncidentType[] = [
     key: 'mva',
     label: 'תאונת דרכים — לכודים',
     icon: '🚑',
-    req: { rescue: 1, engine: 1 },
-    perLevel: { rescue: 1, commander: 1 },
+    req: { engine: 2, commander: 1 },
+    perLevel: { engine: 1 },
     workMin: 30,
     ambulance: true,
     police: true,
@@ -130,7 +136,7 @@ export const INCIDENT_TYPES: IncidentType[] = [
     key: 'hazmat',
     label: 'אירוע חומ״ס',
     icon: '☣️',
-    req: { engine: 1, commander: 1 },
+    req: { engine: 1, tanker: 1, commander: 1 },
     perLevel: { engine: 1, tanker: 1 },
     workMin: 40,
     ambulance: true,
@@ -142,8 +148,8 @@ export const INCIDENT_TYPES: IncidentType[] = [
     key: 'rescue',
     label: 'חילוץ / הצלה',
     icon: '🧗',
-    req: { rescue: 1, engine: 1 },
-    perLevel: { rescue: 1 },
+    req: { engine: 1, ladder: 1 },
+    perLevel: { engine: 1 },
     workMin: 20,
     ambulance: false,
     police: false,
@@ -154,26 +160,7 @@ export const INCIDENT_TYPES: IncidentType[] = [
 
 export const INCIDENT_TYPE: Record<string, IncidentType> = Object.fromEntries(INCIDENT_TYPES.map((t) => [t.key, t]));
 
-export const ADDRESSES: { name: string; pos: LatLng }[] = [
-  { name: 'כפר סבא, ויצמן 120', pos: { lat: 32.1772, lng: 34.9058 } },
-  { name: 'כפר סבא, תל חי 50', pos: { lat: 32.1712, lng: 34.9035 } },
-  { name: 'כפר סבא, קניון ערים', pos: { lat: 32.1781, lng: 34.9121 } },
-  { name: 'כפר סבא, אזור התעשייה — התעשייה 12', pos: { lat: 32.1655, lng: 34.9175 } },
-  { name: 'כפר סבא, פארק העיר', pos: { lat: 32.1868, lng: 34.9072 } },
-  { name: 'כפר סבא, שטח פתוח צפון-מזרח', pos: { lat: 32.1985, lng: 34.9210 } },
-  { name: 'כביש 55, צומת כפר סבא מזרח', pos: { lat: 32.1720, lng: 34.9310 } },
-  { name: 'רעננה, אחוזה 100', pos: { lat: 32.1842, lng: 34.8717 } },
-  { name: 'רעננה, אחוזה 200 — מרכז מסחרי', pos: { lat: 32.1846, lng: 34.8790 } },
-  { name: 'רעננה, פארק רעננה', pos: { lat: 32.1920, lng: 34.8838 } },
-  { name: 'רעננה, אזור התעשייה — התדהר 5', pos: { lat: 32.1995, lng: 34.8635 } },
-  { name: 'כביש 4, מחלף רעננה צפון', pos: { lat: 32.2010, lng: 34.8560 } },
-  { name: 'הוד השרון, דרך רמתיים 50', pos: { lat: 32.1535, lng: 34.8905 } },
-  { name: 'הוד השרון, שדות מגדיאל', pos: { lat: 32.1440, lng: 34.9060 } },
-  { name: 'הרצליה, סוקולוב 40', pos: { lat: 32.1640, lng: 34.8430 } },
-  { name: 'הרצליה פיתוח, אזור התעשייה', pos: { lat: 32.1612, lng: 34.8075 } },
-  { name: 'כביש 531, צומת רעננה דרום', pos: { lat: 32.1720, lng: 34.8650 } },
-  { name: 'נווה ירק, שדות חקלאיים', pos: { lat: 32.1700, lng: 34.8800 } },
-];
+export const ADDRESSES: { name: string; pos: LatLng }[] = ADDRESSES_GEO;
 
 const NAMES = ['אבי', 'יוסי', 'דני', 'מיכל', 'רונן', 'שירן', 'עומר', 'נועה', 'איתי', 'גיא', 'טל', 'ליאור', 'אלון', 'הדר', 'רועי', 'יעל', 'משה', 'עדי', 'עמית', 'אורי', 'נדב', 'שחר', 'בני', 'קרן', 'דור', 'ענבל', 'אסף', 'מאיר', 'זיו', 'רז', 'ניר', 'הילה'];
 const SURNAMES = ['כהן', 'לוי', 'מזרחי', 'פרץ', 'ביטון', 'אברהם', 'פרידמן', 'שפירא', 'דהן', 'אזולאי', 'גבאי', 'חדד', 'אוחיון', 'יוסף', 'בן דוד', 'סויסה'];
@@ -186,21 +173,8 @@ export function randomName(rand: () => number): string {
 export const CALL_RATE_MIN: Record<CallRate, number> = { off: Infinity, low: 8, med: 4, high: 2 };
 export const CALL_RATE_LABEL: Record<CallRate, string> = { off: 'כבוי', low: 'נמוכה', med: 'בינונית', high: 'גבוהה' };
 
-interface StationSeed {
-  id: number;
-  name: string;
-  pos: LatLng;
-  onScreen: boolean;
-  rescue: boolean;
-  commander: string;
-}
-
-const STATION_SEEDS: StationSeed[] = [
-  { id: 1, name: 'תחנת כפר סבא', pos: { lat: 32.1745, lng: 34.8975 }, onScreen: true, rescue: true, commander: 'רפ״ק אבי שושן' },
-  { id: 2, name: 'תחנת רעננה', pos: { lat: 32.1905, lng: 34.8745 }, onScreen: true, rescue: true, commander: 'רפ״ק מיכל אדרי' },
-  { id: 3, name: 'תחנת הוד השרון', pos: { lat: 32.1505, lng: 34.8870 }, onScreen: false, rescue: false, commander: 'רפ״ק גיא בר' },
-  { id: 4, name: 'תחנת הרצליה', pos: { lat: 32.1660, lng: 34.8440 }, onScreen: false, rescue: true, commander: 'רפ״ק טל נחום' },
-];
+/** ראשית: 41/475 פיקוד, 480 מנוף, 490 אשד, 440 צוות א, 406 צוות ב. משנה: 402 (ראשונה) / 401 (שנייה) */
+export const SUB_UNITS = ['402', '401'] as const;
 
 /** בנייה דטרמיניסטית של המצב ההתחלתי */
 export function buildWorld(now: number): { stations: Station[]; vehicles: Vehicle[]; ambulances: Ambulance[] } {
@@ -209,56 +183,63 @@ export function buildWorld(now: number): { stations: Station[]; vehicles: Vehicl
   const stations: Station[] = [];
   const vehicles: Vehicle[] = [];
 
-  const veh = (v: Omit<Vehicle, 'crewTeam' | 'status' | 'incidentId' | 'statusSince'>): Vehicle => ({
-    ...v,
-    crewTeam: v.homeTeam,
+  const veh = (
+    st: (typeof STATIONS_GEO)[number],
+    unit: string,
+    type: UnitType,
+    homeTeam: TeamId | null,
+    crewName: string,
+    role?: CommanderRole,
+  ): Vehicle => ({
+    id: `${st.id}-${unit}`,
+    callsign: `${unit} ${st.short}`,
+    type,
+    stationId: st.id,
+    homeTeam,
+    crewTeam: homeTeam,
     status: 'available',
+    pos: { ...st.pos },
     incidentId: null,
     statusSince: now,
+    unit,
+    crewName,
+    ...(role ? { role } : {}),
   });
+  const crew = () => [randomName(rand), randomName(rand), randomName(rand)];
 
-  for (const seed of STATION_SEEDS) {
-    const crew = () => [randomName(rand), randomName(rand), randomName(rand)];
-    stations.push({
-      id: seed.id,
-      name: seed.name,
-      pos: seed.pos,
-      onScreen: seed.onScreen,
-      teams: {
-        א: { id: 'א', leader: randomName(rand), crew: crew() },
-        ב: { id: 'ב', leader: randomName(rand), crew: crew() },
-      },
-      turnTeam: 'א',
-    });
-    const n = seed.id;
-    const p = seed.pos;
-    vehicles.push(veh({ id: `E${n}1`, callsign: `כבאי ${n}1`, type: 'engine', stationId: n, homeTeam: 'א', pos: { ...p } }));
-    vehicles.push(veh({ id: `E${n}2`, callsign: `כבאי ${n}2`, type: 'engine', stationId: n, homeTeam: 'ב', pos: { ...p } }));
-    vehicles.push(veh({ id: `T${n}5`, callsign: `מיכלית ${n}5`, type: 'tanker', stationId: n, homeTeam: null, pos: { ...p } }));
-    if (seed.rescue) vehicles.push(veh({ id: `R${n}7`, callsign: `חילוץ ${n}7`, type: 'rescue', stationId: n, homeTeam: null, pos: { ...p } }));
-    vehicles.push(veh({ id: `C${n}0`, callsign: `מפקד ${n}0`, type: 'commander', stationId: n, homeTeam: null, pos: { ...p }, commanderName: seed.commander }));
+  for (const g of STATIONS_GEO) {
+    if (g.parentId === null) {
+      const a = { id: 'א' as const, unit: '440', leader: randomName(rand), crew: crew() };
+      const b = { id: 'ב' as const, unit: '406', leader: randomName(rand), crew: crew() };
+      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: null, teamOrder: ['א', 'ב'], teams: { א: a, ב: b }, turnTeam: 'א' });
+      vehicles.push(veh(g, '41', 'commander', null, randomName(rand), 'shift'));
+      vehicles.push(veh(g, '475', 'commander', null, randomName(rand), 'deputy'));
+      vehicles.push(veh(g, '480', 'ladder', null, randomName(rand)));
+      vehicles.push(veh(g, '490', 'tanker', null, randomName(rand)));
+      vehicles.push(veh(g, '440', 'engine', 'א', a.leader));
+      vehicles.push(veh(g, '406', 'engine', 'ב', b.leader));
+    } else {
+      const idx = STATIONS_GEO.filter((x) => x.parentId === g.parentId).findIndex((x) => x.id === g.id);
+      const unit = SUB_UNITS[idx] ?? SUB_UNITS[SUB_UNITS.length - 1];
+      const a = { id: 'א' as const, unit, leader: randomName(rand), crew: crew() };
+      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: g.parentId, teamOrder: ['א'], teams: { א: a }, turnTeam: 'א' });
+      vehicles.push(veh(g, unit, 'engine', 'א', a.leader));
+    }
   }
-  // קצין מבצעים מחוזי — יושב בתחנת כפר סבא
-  vehicles.push(
-    veh({ id: 'C01', callsign: 'קמ״ב 1', type: 'commander', stationId: 1, homeTeam: null, pos: { ...STATION_SEEDS[0].pos }, commanderName: 'סגן טפסר יואב רגב (קמ״ב)' }),
-  );
 
-  const amb = (id: string, callsign: string, baseName: string, base: LatLng): Ambulance => ({
-    id,
-    callsign,
-    base,
-    baseName,
-    pos: { ...base },
-    status: 'available',
-    incidentId: null,
-    statusSince: now,
-  });
-  const ambulances: Ambulance[] = [
-    amb('A1', 'אמבולנס 1411', 'מד״א כפר סבא', { lat: 32.1795, lng: 34.9010 }),
-    amb('A2', 'נט״ן 1471', 'מד״א כפר סבא', { lat: 32.1795, lng: 34.9010 }),
-    amb('A3', 'אמבולנס 1520', 'מד״א רעננה', { lat: 32.1838, lng: 34.8655 }),
-    amb('A4', 'אמבולנס 1630', 'מד״א הוד השרון', { lat: 32.1555, lng: 34.8960 }),
-  ];
+  const ambulances: Ambulance[] = [];
+  for (const base of MDA_BASES)
+    for (const callsign of base.units)
+      ambulances.push({
+        id: `A${ambulances.length + 1}`,
+        callsign,
+        base: { ...base.pos },
+        baseName: base.name,
+        pos: { ...base.pos },
+        status: 'available',
+        incidentId: null,
+        statusSince: now,
+      });
 
   return { stations, vehicles, ambulances };
 }

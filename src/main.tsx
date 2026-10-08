@@ -23,13 +23,18 @@ function useHash() {
 function App() {
   const { state, send, shared } = useEngine();
   const hash = useHash();
+  const station = hash.match(/^#\/station\/(\d+)/);
+  const stationName = station ? state?.stations.find((s) => s.id === +station[1])?.name : undefined;
   useEffect(() => {
     const s = SCREENS.find((x) => x.hash === hash);
-    document.title = s ? `משל״ט · ${s.title}` : 'משל״ט מחוזי — הדמיה';
-  }, [hash]);
+    document.title = station
+      ? `משל״ט · עמדת ${stationName ?? `תחנה ${station[1]}`}`
+      : s
+        ? `משל״ט · ${s.title}`
+        : 'משל״ט מחוזי — הדמיה';
+  }, [hash, stationName]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!state) return <Loading />;
 
-  const station = hash.match(/^#\/station\/(\d+)/);
   if (station) return <Station key={station[1]} state={state} send={send} id={+station[1]} />;
   switch (hash) {
     case '#/dispatch':

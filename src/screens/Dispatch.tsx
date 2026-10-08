@@ -3,12 +3,37 @@ import { CircleMarker, MapContainer, Marker, useMapEvents } from 'react-leaflet'
 import { ADDRESSES, AMB_STATUS_LABEL, DISTRICT, INCIDENT_TYPE, INCIDENT_TYPES, UNIT_LABEL, UNIT_SPEED_KMH } from '../engine/config';
 import { recommend, requirement } from '../engine/dispatch';
 import { etaMin } from '../engine/simulation';
-import type { Command, Incident, IncomingCall, LatLng, SimState, UnitType } from '../engine/model';
-import { DarkTiles, FlyTo, pinIcon } from '../components/mapkit';
-import { AmbChip, IncidentBadge, IncidentTitle, SimControls, StatusChip, TopBar, UnitTag, fmtElapsed, fmtHM } from '../components/ui';
+import type { Assignment, Command, Incident, IncomingCall, LatLng, SimState, Station, UnitType, Vehicle } from '../engine/model';
+import { DarkTiles, FitDistrict, FlyTo, pinIcon } from '../components/mapkit';
+import {
+  AmbChip,
+  IncidentBadge,
+  IncidentTitle,
+  SimControls,
+  StatusChip,
+  TopBar,
+  UnitTag,
+  byUnit,
+  crewLabel,
+  fmtElapsed,
+  fmtHM,
+  mainStations,
+  stationShort,
+  subStations,
+  teamUnit,
+  turnUnit,
+} from '../components/ui';
 import { playRing, useSoundLoop } from '../sound';
 
 type Send = (c: Command) => void;
+
+const REINFORCE: UnitType[] = ['engine', 'ladder', 'tanker', 'commander'];
+
+/** 'צוות 440' רק כשהצוות לא נובע כבר מאות הקריאה של הרכב */
+function teamNote(state: SimState, a: Assignment, v: Vehicle): string | null {
+  const unit = teamUnit(state.stations.find((s) => s.id === a.stationId), a.team);
+  return unit && unit !== v.unit ? `צוות ${unit}` : null;
+}
 
 interface Draft {
   callId?: string;
@@ -164,13 +189,18 @@ function IncidentForm({ state, send, draft, setDraft }: { state: SimState; send:
       </select>
       <input placeholder="כתובת" value={draft.address} onChange={(e) => set({ address: e.target.value })} />
       <div className="pick-map">
-        <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={12} zoomControl={false} attributionControl={false}>
+        <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={DISTRICT.zoom} zoomSnap={0.25} zoomControl={false} attributionControl={false}>
           <DarkTiles />
-          {state.stations.map((s) => (
-            <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={5} pathOptions={{ color: '#ff6b35', fillOpacity: 0.9 }} />
-          ))}
+          <FitDistrict points={state.stations.map((s) => s.pos)} />
+          {state.stations.map((s) =>
+            s.parentId === null ? (
+              <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={5} pathOptions={{ color: '#ff6b35', fillOpacity: 0.9, weight: 2 }} />
+            ) : (
+              <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={2.5} pathOptions={{ color: '#c9805f', fillOpacity: 0.7, weight: 1 }} />
+            ),
+          )}
           {draft.pos && <Marker position={[draft.pos.lat, draft.pos.lng]} icon={pinIcon()} />}
-          <FlyTo pos={draft.pos} />
+          <FlyTo pos={draft.pos} zoom={12} />
           <PickHandler
             onPick={(pos) =>
               set({ pos, address: draft.address && !draft.address.startsWith('נקודה במפה') ? draft.address : `נקודה במפה (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})` })
@@ -189,11 +219,13 @@ function IncidentForm({ state, send, draft, setDraft }: { state: SimState; send:
           <div className="lbl">{state.autoDispatch ? 'יוזנקו אוטומטית:' : 'המלצת המערכת:'}</div>
           <div className="preview-units">
             {rec.assignments.map((a) => {
-              const v = state.vehicles.find((x) => x.id === a.vehicleId)!;
+              const v = state.vehicles.find((x) => x.id === a.vehicleId);
+              if (!v) return null;
+              const note = teamNote(state, a, v);
               return (
                 <span key={a.vehicleId} className="unit-tag st-available">
                   {v.callsign}
-                  {a.team && <small> · צוות {a.team}</small>}
+                  {note && <small> · {note}</small>}
                   <small className="dim"> · {etaMin(v.pos, draft.pos!, UNIT_SPEED_KMH[v.type])}′</small>
                 </span>
               );
@@ -280,7 +312,7 @@ function IncidentCard({ inc, state, send }: { inc: Incident; state: SimState; se
       {inc.status !== 'new' && inc.status !== 'controlled' && (
         <div className="inc-actions">
           <span className="lbl">תגבור:</span>
-          {(['engine', 'tanker', 'rescue', 'commander'] as UnitType[]).map((t) => (
+          {REINFORCE.map((t) => (
             <button key={t} className="btn xs" onClick={() => send({ type: 'reinforce', incidentId: inc.id, unitType: t })}>
               + {UNIT_LABEL[t]}
             </button>
@@ -333,8 +365,10 @@ function ManualDispatch({ inc, state, send }: { inc: Incident; state: SimState; 
       <div className="lbl blink">ממתין לאישור הזנקה — המלצת המערכת:</div>
       <div className="preview-units">
         {rec.assignments.map((a) => {
-          const v = state.vehicles.find((x) => x.id === a.vehicleId)!;
+          const v = state.vehicles.find((x) => x.id === a.vehicleId);
+          if (!v) return null;
           const on = !off.has(a.vehicleId);
+          const note = teamNote(state, a, v);
           return (
             <label key={a.vehicleId} className={`unit-tag pick ${on ? 'st-available' : 'off'}`}>
               <input
@@ -348,7 +382,7 @@ function ManualDispatch({ inc, state, send }: { inc: Incident; state: SimState; 
                 }}
               />
               {v.callsign}
-              {a.team && <small> · צוות {a.team}</small>}
+              {note && <small> · {note}</small>}
             </label>
           );
         })}
@@ -360,31 +394,50 @@ function ManualDispatch({ inc, state, send }: { inc: Incident; state: SimState; 
   );
 }
 
+function UnitRow({ v, state }: { v: Vehicle; state: SimState }) {
+  return (
+    <div className="ub-row">
+      <span className="callsign">{v.callsign}</span>
+      <span className="dim small ub-crew">{crewLabel(v)}</span>
+      <span className="push" />
+      {v.incidentId && <span className="mono dim small">#{v.incidentId}</span>}
+      <StatusChip v={v} />
+    </div>
+  );
+}
+
+function SubBlock({ st, state }: { st: Station; state: SimState }) {
+  const vs = state.vehicles.filter((v) => v.stationId === st.id).sort(byUnit);
+  return (
+    <div className="ub-sub">
+      <div className="ub-sub-name">↳ {stationShort(st)}</div>
+      {vs.map((v) => (
+        <UnitRow key={v.id} v={v} state={state} />
+      ))}
+    </div>
+  );
+}
+
 function UnitBoard({ state }: { state: SimState }) {
   return (
     <div className="unit-board">
-      {state.stations.map((st) => (
+      {mainStations(state.stations).map((st) => (
         <div key={st.id} className="ub-station">
           <div className="ub-head">
             <b>{st.name}</b>
             <span className="turn">
-              בתור: <b>צוות {st.turnTeam}</b>
+              בתור: <b className="mono">{turnUnit(st)}</b>
             </span>
           </div>
           {state.vehicles
             .filter((v) => v.stationId === st.id)
-            .map((v) => {
-              const inc = state.incidents.find((i) => i.id === v.incidentId);
-              return (
-                <div key={v.id} className="ub-row">
-                  <span className="callsign">{v.callsign}</span>
-                  <span className="dim small">{v.type === 'commander' ? v.commanderName : v.crewTeam ? `צוות ${v.crewTeam}` : UNIT_LABEL[v.type]}</span>
-                  <span className="push" />
-                  {inc && <span className="mono dim small">#{inc.id}</span>}
-                  <StatusChip v={v} />
-                </div>
-              );
-            })}
+            .sort(byUnit)
+            .map((v) => (
+              <UnitRow key={v.id} v={v} state={state} />
+            ))}
+          {subStations(state.stations, st.id).map((sub) => (
+            <SubBlock key={sub.id} st={sub} state={state} />
+          ))}
         </div>
       ))}
       <div className="ub-station">
