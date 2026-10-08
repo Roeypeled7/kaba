@@ -1,7 +1,14 @@
 export type LatLng = { lat: number; lng: number };
 
 export type TeamId = 'א' | 'ב';
-export type UnitType = 'engine' | 'tanker' | 'rescue' | 'commander';
+/**
+ * engine    — רכב כיבוי: 440 (צוות א), 406 (צוות ב), 402/401 בתחנות משנה
+ * ladder    — 480 מנוף
+ * tanker    — 490 אשד
+ * commander — 41 מפקד משמרת, 475 סגן מפקד משמרת
+ */
+export type UnitType = 'engine' | 'ladder' | 'tanker' | 'commander';
+export type CommanderRole = 'shift' | 'deputy';
 
 export type VehicleStatus =
   | 'available' // זמין בתחנה
@@ -14,6 +21,8 @@ export type VehicleStatus =
 
 export interface Team {
   id: TeamId;
+  /** מספר הרכב שהצוות מאייש: 440 / 406 / 402 / 401 */
+  unit: string;
   leader: string;
   crew: string[];
 }
@@ -22,10 +31,12 @@ export interface Station {
   id: number;
   name: string;
   pos: LatLng;
-  /** תחנה שמופיעה כמסך עמדה בהדמיה */
-  onScreen: boolean;
-  teams: Record<TeamId, Team>;
-  /** הצוות שבתור ליציאה הבאה */
+  /** null = תחנה ראשית; אחרת — מזהה התחנה הראשית שתחנת המשנה שייכת אליה */
+  parentId: number | null;
+  /** סדר הצוותים בתחנה: ראשית ['א','ב'] (440/406), משנה ['א'] (402 או 401) */
+  teamOrder: TeamId[];
+  teams: Partial<Record<TeamId, Team>>;
+  /** הצוות שבתור ליציאה הבאה (בתחנת משנה תמיד 'א') */
   turnTeam: TeamId;
 }
 
@@ -34,17 +45,21 @@ export interface Vehicle {
   callsign: string;
   type: UnitType;
   stationId: number;
-  /** צוות קבוע (רביעייה), או null לרכב משותף/פיקוד */
+  /** רכב כיבוי — הצוות שמאייש אותו; מנוף/אשד/פיקוד — null (צוות עצמאי מחוץ לסבב) */
   homeTeam: TeamId | null;
-  /** הצוות שמאייש כרגע (נקבע בהזנקה) */
+  /** הצוות שמאייש כרגע (לרכב כיבוי = homeTeam) */
   crewTeam: TeamId | null;
   status: VehicleStatus;
   pos: LatLng;
   incidentId: string | null;
   /** זמן סימולציה (ms) שבו נכנס לסטטוס הנוכחי */
   statusSince: number;
-  /** לרכבי פיקוד — שם המפקד */
-  commanderName?: string;
+  /** מספר הרכב בלי שם התחנה: '440', '475'… */
+  unit: string;
+  /** שם איש הצוות/המפקד שמוצג ליד הרכב */
+  crewName?: string;
+  /** לרכבי פיקוד */
+  role?: CommanderRole;
 }
 
 export type AmbulanceStatus = 'available' | 'enroute' | 'onscene' | 'transporting' | 'returning';
@@ -112,6 +127,7 @@ export interface StationDispatch {
   ack: boolean;
 }
 
+/** ערוץ לכל תחנה ראשית (`st1`…`st6`); תחנות משנה משדרות בערוץ של התחנה הראשית */
 export type ChannelId = 'district' | 'mda' | 'police' | `st${number}`;
 
 export interface RadioMsg {
