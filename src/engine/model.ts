@@ -19,6 +19,14 @@ export type VehicleStatus =
   | 'returning' // חוזר לתחנה
   | 'offline'; // לא כשיר
 
+/** תפקיד איש צוות ברכב — כפי שמוגדר בטאבלט */
+export type CrewRole = 'commander' | 'driver' | 'firefighter';
+
+export interface CrewMember {
+  name: string;
+  role: CrewRole;
+}
+
 export interface Team {
   id: TeamId;
   /** מספר הרכב שהצוות מאייש: 440 / 406 / 402 / 401 */
@@ -38,6 +46,8 @@ export interface Station {
   teams: Partial<Record<TeamId, Team>>;
   /** הצוות שבתור ליציאה הבאה (בתחנת משנה תמיד 'א') */
   turnTeam: TeamId;
+  /** כוח אדם בתחנה שלא משובץ קבוע לצוות — זמין לשיבוץ מהטאבלט */
+  reserve: string[];
 }
 
 export interface Vehicle {
@@ -60,6 +70,8 @@ export interface Vehicle {
   crewName?: string;
   /** לרכבי פיקוד */
   role?: CommanderRole;
+  /** שיבוץ הצוות ברכב (מסך "צוות ברכב" בטאבלט) */
+  crew: CrewMember[];
 }
 
 export type AmbulanceStatus = 'available' | 'enroute' | 'onscene' | 'transporting' | 'returning';
@@ -163,7 +175,7 @@ export interface SimState {
   /** בקשות מד״א שממתינות לתשובה: incidentId → זמן תשובה */
   mdaPending: { incidentId: string; at: number }[];
   /** תגובות יחידות מתוזמנות (למשל לדיווח מצב) */
-  pendingReplies: { at: number; channel: ChannelId; from: string; text: string; incidentId?: string }[];
+  pendingReplies: { at: number; channel: ChannelId; from: string; to?: string; text: string; incidentId?: string }[];
 }
 
 export type Command =
@@ -188,7 +200,10 @@ export type Command =
   | { type: 'vehicleAction'; vehicleId: string; action: 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online' }
   | { type: 'ackDispatch'; dispatchId: string }
   | { type: 'setTurnTeam'; stationId: number; team: TeamId }
+  | { type: 'setVehicleCrew'; vehicleId: string; crew: CrewMember[] }
   | { type: 'sendRadio'; channel: ChannelId; to: string; text: string; incidentId?: string }
+  /** שידור מהרכב עצמו (טאבלט) למוקד בערוץ התחנה */
+  | { type: 'unitRadio'; vehicleId: string; text: string }
   | { type: 'requestAmbulance'; incidentId: string }
   | { type: 'notifyPolice'; incidentId: string }
   | { type: 'setAutoDispatch'; value: boolean }

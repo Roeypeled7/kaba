@@ -17,9 +17,11 @@ export const SCREENS = [
   { hash: '#/comms', title: 'מערכת קשר', short: 'קשר' },
   { hash: '#/station/1', title: 'עמדות תחנה', short: 'תחנות' },
   { hash: '#/map', title: 'מפה', short: 'מפה' },
+  { hash: '#/mdt', title: 'טאבלט רכב', short: 'טאבלט' },
 ];
 
-const navOn = (hash: string) => (hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : location.hash === hash);
+const navOn = (hash: string) =>
+  hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : hash === '#/mdt' ? location.hash.startsWith('#/mdt') : location.hash === hash;
 
 /* ── מבנה המחוז ── */
 
@@ -60,6 +62,17 @@ export function teamOut(vehicles: Vehicle[], stationId: number, team: TeamId): b
     (v) => v.stationId === stationId && v.type !== 'commander' && v.crewTeam === team && v.status !== 'available' && v.status !== 'offline',
   );
 }
+
+/** הפעולה הבאה של רכב לפי הסטטוס שלו — משותף לעמדת התחנה ולטאבלט */
+export const VEHICLE_ACTIONS: Partial<Record<Vehicle['status'], { action: 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online'; label: string; cls: string }>> = {
+  dispatched: { action: 'depart', label: 'יצאנו', cls: 'fire' },
+  enroute: { action: 'arrive', label: 'הגענו לזירה', cls: 'warn' },
+  onscene: { action: 'clear', label: 'פנויים — חוזרים', cls: 'ok' },
+  cleared: { action: 'clear', label: 'חוזרים לתחנה', cls: 'ok' },
+  returning: { action: 'home', label: 'בתחנה', cls: 'ok' },
+  available: { action: 'offline', label: 'לא כשיר', cls: 'ghost' },
+  offline: { action: 'online', label: 'חזר לכשירות', cls: 'ok' },
+};
 
 /** מה שמוצג בעמודת הצוות: תפקיד ושם למפקד, שם איש הצוות לשאר */
 export function crewLabel(v: Vehicle): string {

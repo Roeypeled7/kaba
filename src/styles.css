@@ -392,3 +392,5 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .map-incidents { width: 220px; max-height: 50%; }
   .alarm-word { font-size: 36px; }
 }
+.veh-mdt { margin-inline-start: auto; font-size: 11px; color: var(--dim); text-decoration: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
+.veh-mdt:hover { color: var(--text); border-color: var(--dim); }

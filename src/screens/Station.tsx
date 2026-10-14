@@ -15,22 +15,11 @@ import {
   teamOut,
   teamUnit,
   turnUnit,
+  VEHICLE_ACTIONS as ACTIONS,
 } from '../components/ui';
 import { playAlarm, useSoundLoop } from '../sound';
 
 type Send = (c: Command) => void;
-type Action = 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online';
-
-const ACTIONS: Partial<Record<Vehicle['status'], { action: Action; label: string; cls: string }>> = {
-  dispatched: { action: 'depart', label: 'יצאנו', cls: 'fire' },
-  enroute: { action: 'arrive', label: 'הגענו לזירה', cls: 'warn' },
-  onscene: { action: 'clear', label: 'פנויים — חוזרים', cls: 'ok' },
-  cleared: { action: 'clear', label: 'חוזרים לתחנה', cls: 'ok' },
-  returning: { action: 'home', label: 'בתחנה', cls: 'ok' },
-  available: { action: 'offline', label: 'לא כשיר', cls: 'ghost' },
-  offline: { action: 'online', label: 'חזר לכשירות', cls: 'ok' },
-};
-
 export default function Station({ state, send, id }: { state: SimState; send: Send; id: number }) {
   const st = state.stations.find((s) => s.id === id);
   const group = stationGroupIds(state.stations, id);
@@ -263,6 +252,9 @@ function VehicleCard({ v, state, send }: { v: Vehicle; state: SimState; send: Se
       <div className="veh-head">
         <span className="veh-sign mono">{v.unit}</span>
         <span className="dim">{UNIT_LABEL[v.type]}</span>
+        <a className="veh-mdt" href={`#/mdt/${encodeURIComponent(v.id)}`} title="פתח את הטאבלט של הרכב">
+          טאבלט
+        </a>
       </div>
       <div className="veh-status">
         <StatusChip v={v} big />

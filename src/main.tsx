@@ -9,6 +9,7 @@ import Dispatch from './screens/Dispatch';
 import Comms from './screens/Comms';
 import Station from './screens/Station';
 import MapScreen from './screens/MapScreen';
+import Tablet from './screens/mdt/Tablet';
 
 function useHash() {
   const [hash, setHash] = useState(location.hash || '#/');
@@ -24,10 +25,14 @@ function App() {
   const { state, send, shared } = useEngine();
   const hash = useHash();
   const station = hash.match(/^#\/station\/(\d+)/);
+  const mdt = hash.match(/^#\/mdt(?:\/(.*))?$/);
+  const mdtPath = mdt?.[1]?.split('/').filter(Boolean) ?? [];
   const stationName = station ? state?.stations.find((s) => s.id === +station[1])?.name : undefined;
   useEffect(() => {
     const s = SCREENS.find((x) => x.hash === hash);
-    document.title = station
+    document.title = mdt
+      ? `טאבלט · ${mdtPath[0] ? decodeURIComponent(mdtPath[0]) : 'בחירת רכב'}`
+      : station
       ? `משל״ט · עמדת ${stationName ?? `תחנה ${station[1]}`}`
       : s
         ? `משל״ט · ${s.title}`
@@ -35,6 +40,7 @@ function App() {
   }, [hash, stationName]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!state) return <Loading />;
 
+  if (mdt) return <Tablet key={mdtPath[0] ?? ''} state={state} send={send} path={mdtPath} />;
   if (station) return <Station key={station[1]} state={state} send={send} id={+station[1]} />;
   switch (hash) {
     case '#/dispatch':

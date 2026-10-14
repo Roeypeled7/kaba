@@ -1,4 +1,4 @@
-import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate, CommanderRole, TeamId } from './model';
+import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate, CommanderRole, CrewMember, CrewRole, TeamId } from './model';
 import { ADDRESSES_GEO, DISTRICT_GEO, HOSPITALS, MDA_BASES, STATIONS_GEO } from './geo';
 
 /** כל המיקומים מגיעים מ-geo.ts */
@@ -16,6 +16,12 @@ export const UNIT_LABEL: Record<UnitType, string> = {
   ladder: 'מנוף',
   tanker: 'אשד',
   commander: 'מפקד',
+};
+
+export const CREW_ROLE_LABEL: Record<CrewRole, string> = {
+  commander: 'מפקד צוות',
+  driver: 'נהג',
+  firefighter: 'לוחם אש',
 };
 
 export const ROLE_LABEL: Record<CommanderRole, string> = {
@@ -190,6 +196,7 @@ export function buildWorld(now: number): { stations: Station[]; vehicles: Vehicl
     homeTeam: TeamId | null,
     crewName: string,
     role?: CommanderRole,
+    crewList: CrewMember[] = [{ name: crewName, role: type === 'commander' ? 'commander' : 'driver' }],
   ): Vehicle => ({
     id: `${st.id}-${unit}`,
     callsign: `${unit} ${st.short}`,
@@ -204,28 +211,37 @@ export function buildWorld(now: number): { stations: Station[]; vehicles: Vehicl
     unit,
     crewName,
     ...(role ? { role } : {}),
+    crew: crewList,
   });
+  /** מפקד הצוות + נהג + לוחמי אש */
+  const teamCrew = (t: { leader: string; crew: string[] }): CrewMember[] => [
+    { name: t.leader, role: 'commander' },
+    ...t.crew.map((name, i): CrewMember => ({ name, role: i === 0 ? 'driver' : 'firefighter' })),
+  ];
   const crew = () => [randomName(rand), randomName(rand), randomName(rand)];
 
   for (const g of STATIONS_GEO) {
     if (g.parentId === null) {
       const a = { id: 'א' as const, unit: '440', leader: randomName(rand), crew: crew() };
       const b = { id: 'ב' as const, unit: '406', leader: randomName(rand), crew: crew() };
-      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: null, teamOrder: ['א', 'ב'], teams: { א: a, ב: b }, turnTeam: 'א' });
+      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: null, teamOrder: ['א', 'ב'], teams: { א: a, ב: b }, turnTeam: 'א', reserve: [] });
       vehicles.push(veh(g, '41', 'commander', null, randomName(rand), 'shift'));
       vehicles.push(veh(g, '475', 'commander', null, randomName(rand), 'deputy'));
       vehicles.push(veh(g, '480', 'ladder', null, randomName(rand)));
       vehicles.push(veh(g, '490', 'tanker', null, randomName(rand)));
-      vehicles.push(veh(g, '440', 'engine', 'א', a.leader));
-      vehicles.push(veh(g, '406', 'engine', 'ב', b.leader));
+      vehicles.push(veh(g, '440', 'engine', 'א', a.leader, undefined, teamCrew(a)));
+      vehicles.push(veh(g, '406', 'engine', 'ב', b.leader, undefined, teamCrew(b)));
     } else {
       const idx = STATIONS_GEO.filter((x) => x.parentId === g.parentId).findIndex((x) => x.id === g.id);
       const unit = SUB_UNITS[idx] ?? SUB_UNITS[SUB_UNITS.length - 1];
       const a = { id: 'א' as const, unit, leader: randomName(rand), crew: crew() };
-      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: g.parentId, teamOrder: ['א'], teams: { א: a }, turnTeam: 'א' });
-      vehicles.push(veh(g, unit, 'engine', 'א', a.leader));
+      stations.push({ id: g.id, name: g.name, pos: g.pos, parentId: g.parentId, teamOrder: ['א'], teams: { א: a }, turnTeam: 'א', reserve: [] });
+      vehicles.push(veh(g, unit, 'engine', 'א', a.leader, undefined, teamCrew(a)));
     }
   }
+
+  // אחרי כל השמות הקבועים, כדי לא להזיז את רצף השמות של הצוותים
+  for (const st of stations) st.reserve = Array.from({ length: st.parentId === null ? 6 : 3 }, () => randomName(rand));
 
   const ambulances: Ambulance[] = [];
   for (const base of MDA_BASES)

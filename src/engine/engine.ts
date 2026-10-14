@@ -352,6 +352,15 @@ export class Engine {
         }
         break;
       }
+      case 'setVehicleCrew': {
+        const v = this.vehicle(cmd.vehicleId);
+        if (!v) break;
+        v.crew = cmd.crew.map((m) => ({ ...m }));
+        // השם שמוצג ליד הרכב בשאר העמדות — מפקד הצוות, או הראשון ברשימה
+        const lead = v.crew.find((m) => m.role === 'commander') ?? v.crew[0];
+        if (lead) v.crewName = lead.name;
+        break;
+      }
       case 'sendRadio': {
         this.radio(cmd.channel, 'מוקד', cmd.to, cmd.text, cmd.incidentId, true);
         const v = s.vehicles.find((x) => x.callsign === cmd.to);
@@ -360,6 +369,18 @@ export class Engine {
         else if (st) this.schedule(rand(3, 7), this.stationChannel(st), st.name, 'קיבלתי', cmd.incidentId);
         else if (cmd.channel === 'mda') this.schedule(rand(5, 10), 'mda', 'מד״א', 'קיבלתי', cmd.incidentId);
         else if (cmd.channel === 'police') this.schedule(rand(5, 10), 'police', 'מוקד משטרה', 'קיבלתי', cmd.incidentId);
+        break;
+      }
+      case 'unitRadio': {
+        const v = this.vehicle(cmd.vehicleId);
+        if (!v) break;
+        const ch = this.channelOf(v);
+        const incId = v.incidentId ?? undefined;
+        this.radio(ch, v.callsign, 'מוקד', cmd.text, incId);
+        const inc = this.incident(v.incidentId);
+        if (inc) this.log(inc, `${v.callsign}: ${cmd.text}`);
+        const reply = /בדיקת קשר/.test(cmd.text) ? `${v.callsign}, שומע אותך חזק וברור` : `${v.callsign}, קיבלתי`;
+        s.pendingReplies.push({ at: this.now + rand(3, 7) * 1000, channel: ch, from: 'מוקד', to: v.callsign, text: reply, incidentId: incId });
         break;
       }
       case 'requestAmbulance': {
@@ -419,7 +440,7 @@ export class Engine {
 
     // תשובות מתוזמנות בקשר
     if (s.pendingReplies.some((p) => p.at <= now)) {
-      for (const p of s.pendingReplies.filter((p) => p.at <= now)) this.radio(p.channel, p.from, 'מוקד', p.text, p.incidentId);
+      for (const p of s.pendingReplies.filter((p) => p.at <= now)) this.radio(p.channel, p.from, p.to ?? 'מוקד', p.text, p.incidentId, p.from === 'מוקד');
       s.pendingReplies = s.pendingReplies.filter((p) => p.at > now);
     }
 
