@@ -7,7 +7,7 @@ const svg = (size = 56, children: React.ReactNode, vb = '0 0 64 64') => (
   </svg>
 );
 
-/** להבה — האירועים שלי: צללית אחת ברורה עם להבה פנימית */
+/** להבה — אירועים: צללית אחת ברורה עם להבה פנימית */
 export const IcFlame = ({ size }: P) =>
   svg(
     size,

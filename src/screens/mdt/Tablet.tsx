@@ -23,7 +23,7 @@ const BEZEL_Y = 42;
 
 /** צבע האריח — שלושה צבעים בלבד: אדום-אש למבצעי, ענבר לצוות וציוד, פלדה לכלים */
 const PAGES: Record<string, { title: string; color: string; Icon: (p: { size?: number }) => JSX.Element; Comp: (c: Ctx) => JSX.Element }> = {
-  events: { title: 'האירועים שלי', color: '#ff3d2e', Icon: IcFlame, Comp: Events },
+  events: { title: 'אירועים', color: '#ff3d2e', Icon: IcFlame, Comp: Events },
   crew: { title: 'צוות ברכב', color: '#ffb020', Icon: IcHelmet, Comp: Crew },
   checks: { title: 'בדיקות רכב', color: '#ffb020', Icon: IcWrenchCheck, Comp: Checks },
   radios: { title: 'צימוד מכשירי קשר', color: '#c9d3de', Icon: IcWalkie, Comp: Radios },
