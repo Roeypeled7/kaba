@@ -139,16 +139,16 @@ function ChecksHome({ v, state, go }: Ctx) {
   const badge = (n: number) => <span className={`mdt-badge ${n <= 0 ? 'red' : 'green'}`}>{n}</span>;
   const faults = openFaults(data).length;
   const tiles = [
-    { k: 'daily', ic: <IcTools size={64} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
-    { k: 'weekly', ic: <IcToolsCal size={64} star />, b: badge(daysLeft(data, 'weekly', now)) },
-    { k: 'semi', ic: <IcToolsCal size={64} />, b: badge(daysLeft(data, 'semi', now)) },
-    { k: 'faults', ic: <IcClipboard size={64} />, b: faults ? <span className="mdt-badge red">{faults}</span> : null },
+    { k: 'daily', c: '#3ddc84', ic: <IcTools size={64} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
+    { k: 'weekly', c: '#ffb020', ic: <IcToolsCal size={64} star />, b: badge(daysLeft(data, 'weekly', now)) },
+    { k: 'semi', c: '#ff7a1a', ic: <IcToolsCal size={64} />, b: badge(daysLeft(data, 'semi', now)) },
+    { k: 'faults', c: '#ff3d2e', ic: <IcClipboard size={64} />, b: faults ? <span className="mdt-badge red">{faults}</span> : null },
   ];
   return (
     <div className="mdt-page">
       <div className="mdt-tiles big">
         {tiles.map((t) => (
-          <button key={t.k} className="mdt-tile" onClick={() => go(`checks/${t.k}`)}>
+          <button key={t.k} className="mdt-tile" style={{ '--tc': t.c } as React.CSSProperties} onClick={() => go(`checks/${t.k}`)}>
             {t.b}
             <span className="mdt-tile-ic">{t.ic}</span>
             <span className="mdt-tile-lbl">{CHECK_TITLE[t.k]}</span>

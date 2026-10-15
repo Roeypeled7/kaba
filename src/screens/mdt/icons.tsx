@@ -1,4 +1,4 @@
-/* אייקונים של הטאבלט — מלאים בצבע currentColor, בסגנון האפליקציה ברכב */
+/* אייקונים של הטאבלט — סט כבאות: שני גוונים על currentColor (הגוון השני ב-opacity) */
 
 type P = { size?: number };
 const svg = (size = 56, children: React.ReactNode, vb = '0 0 64 64') => (
@@ -7,106 +7,147 @@ const svg = (size = 56, children: React.ReactNode, vb = '0 0 64 64') => (
   </svg>
 );
 
-export const IcCalendar = ({ size }: P) =>
+/** להבה — האירועים שלי */
+export const IcFlame = ({ size }: P) =>
   svg(
     size,
     <>
-      <rect x="18" y="6" width="5" height="12" rx="2.5" />
-      <rect x="41" y="6" width="5" height="12" rx="2.5" />
-      <path d="M12 13h5v4a4 4 0 0 0 8 0v-4h14v4a4 4 0 0 0 8 0v-4h5a4 4 0 0 1 4 4v38a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4Zm-0 15v26h40V28Z" />
+      <path d="M33 4c2 10 11 14 13 25 1 6-1 11-4 15 1-7-3-11-6-13 1 7-4 10-6 16-2-4-7-6-7-13 0-5 3-8 3-14 3 2 5 5 5 9 4-6 5-15 2-25Z" opacity=".55" />
+      <path d="M32 60c-11 0-19-8-19-18 0-8 5-12 7-19 3 3 5 6 5 10 2-3 3-6 3-10 7 5 12 12 12 19 0 10-8 18-8 18Zm0-6c4 0 7-3 7-7 0-4-3-7-5-10-1 3-3 5-5 6-2-2-3-4-3-6-2 3-3 6-3 9 0 4 4 8 9 8Z" />
+    </>,
+  );
+
+/** קסדת כבאי — צוות ברכב */
+export const IcHelmet = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M8 40c0-15 11-27 24-27s24 12 24 27v2H8Z" />
+      <path d="M4 42h56a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3v-2a3 3 0 0 1 3-3Z" opacity=".55" />
+      <path d="M26 8h12a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3H26a3 3 0 0 1-3-3v-3a3 3 0 0 1 3-3Z" opacity=".55" />
+      <path d="M24 24h16l-2 12H26Z" fill="#000" opacity=".35" />
+      <path d="M27 26h10l-1.3 8h-7.4Z" opacity=".9" />
+    </>,
+  );
+
+/** מפתח ברגים + וי — בדיקות רכב */
+export const IcWrenchCheck = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M40 6a14 14 0 0 1 12 7l-9 9-6-1-1-6 9-9a14 14 0 0 0-5 0Zm-5 23 4 4L15 57a4.5 4.5 0 0 1-6.4-6.4Z" />
+      <path d="M38 8a15 15 0 0 1 17 17c-1 6-5 10-11 11l-4-4 7-7-7-7-7 7-4-4c1-6 5-10 9-13Z" opacity=".55" />
+      <circle cx="47" cy="47" r="13" />
+      <path d="M40.5 47.5l4.5 4.5 9-9" fill="none" stroke="#000" strokeOpacity=".55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </>,
+  );
+
+/** מכשיר קשר — צימוד מכשירי קשר */
+export const IcWalkie = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <rect x="31" y="2" width="5" height="16" rx="2.5" opacity=".55" />
+      <path d="M18 16h20a5 5 0 0 1 5 5v36a5 5 0 0 1-5 5H18a5 5 0 0 1-5-5V21a5 5 0 0 1 5-5Zm3 7v10h14V23Z" />
+      <path d="M21 38h14v3H21Zm0 6h14v3H21Zm0 6h8v3h-8Z" fill="#000" opacity=".4" />
+      <path d="M48 22a9 9 0 0 1 0 14l-2.6-2.6a5.3 5.3 0 0 0 0-8.8Zm5.4-5.4A16.5 16.5 0 0 1 53.4 42l-2.6-2.6a12.8 12.8 0 0 0 0-20.2Z" opacity=".55" />
+    </>,
+  );
+
+/** לוח סיכון — חומ״ס */
+export const IcHazard = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M32 3 61 32 32 61 3 32Z" opacity=".55" />
+      <path d="M32 11 53 32 32 53 11 32Z" />
+      <path d="M32 20a3.5 3.5 0 0 1 3.5 3.5l-1.2 12a2.3 2.3 0 0 1-4.6 0l-1.2-12A3.5 3.5 0 0 1 32 20Zm0 20a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" fill="#000" opacity=".55" />
+    </>,
+  );
+
+/** מד מהירות — דאשבורד */
+export const IcGauge = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M32 10a26 26 0 0 1 26 26c0 7-3 13-7 18H13c-4-5-7-11-7-18a26 26 0 0 1 26-26Zm0 8a18 18 0 0 0-18 18c0 4 1 8 4 11h28c3-3 4-7 4-11a18 18 0 0 0-18-18Z" opacity=".55" />
+      <path d="M32 22a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0v-2a3 3 0 0 1 3-3Zm-13 11a3 3 0 1 1 4-4l1.5 1.5a3 3 0 1 1-4 4Zm26 0-1.5 1.5a3 3 0 1 1-4-4l1.5-1.5a3 3 0 1 1 4 4Z" />
+      <path d="M44 24 35 43a4.5 4.5 0 1 1-5-2Z" />
+    </>,
+  );
+
+/** מחסום — פתיחת שערים */
+export const IcBarrier = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <rect x="6" y="36" width="12" height="24" rx="2" opacity=".55" />
+      <circle cx="12" cy="36" r="7" />
+      <path d="M14 31 52 8l5 7-38 23Z" />
+      <path d="M22 26l4 6 6-3.6-4-6Zm13-8 4 6 6-3.6-4-6Z" fill="#000" opacity=".45" />
+    </>,
+  );
+
+/** ברז כיבוי — כלי עזר */
+export const IcHydrant = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M26 6h12l4 8H22Z" />
+      <path d="M20 14h24v6H20Z" opacity=".55" />
+      <path d="M22 20h20v34H22Z" />
+      <path d="M12 28h10v8H12a4 4 0 0 1 0-8Zm30 0h10a4 4 0 0 1 0 8H42Z" opacity=".55" />
+      <circle cx="32" cy="32" r="4" fill="#000" opacity=".4" />
+      <path d="M26 42h12v3H26Z" fill="#000" opacity=".4" />
+      <path d="M16 54h32v6H16Z" opacity=".55" />
+    </>,
+  );
+
+/** שומרים על השמות הישנים כדי שהמסכים הפנימיים ימשיכו לעבוד */
+export const IcCalendar = IcFlame;
+export const IcCrew = IcHelmet;
+export const IcTools = IcWrenchCheck;
+export const IcRadio = IcWalkie;
+export const IcSkull = IcHazard;
+export const IcChart = IcGauge;
+export const IcGate = IcBarrier;
+export const IcToolbox = IcHydrant;
+
+/** לוח שנה קטן — לבדיקות תקופתיות */
+export const IcCalendarSmall = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M12 13h40a4 4 0 0 1 4 4v38a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4Zm0 14v26h40V27Z" />
+      <rect x="18" y="6" width="5" height="12" rx="2.5" opacity=".55" />
+      <rect x="41" y="6" width="5" height="12" rx="2.5" opacity=".55" />
       {[0, 1, 2].map((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={19 + c * 10} y={32 + r * 7} width="5" height="4" rx="1" />))}
     </>,
   );
 
-export const IcCrew = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <circle cx="32" cy="18" r="9" />
-      <path d="M17 50c0-10 6.5-17 15-17s15 7 15 17v4H17Z" />
-      <circle cx="13" cy="24" r="6.5" />
-      <path d="M2 52c0-8 4.5-13 11-13 2.3 0 4.3.6 6 1.8-2.4 3.2-3.8 7.3-4 11.2V54H2Z" />
-      <circle cx="51" cy="24" r="6.5" />
-      <path d="M62 52c0-8-4.5-13-11-13-2.3 0-4.3.6-6 1.8 2.4 3.2 3.8 7.3 4 11.2V54h13Z" />
-    </>,
-  );
-
-export const IcTools = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      {/* מברג */}
-      <path d="M44 6l8 0 6 6-3 9-6 2L24 48l-6-6 25-25 2-6Z" transform="rotate(0)" />
-      <path d="M20 44l3 3-9 11a4 4 0 0 1-6-6Z" />
-      {/* מפתח */}
-      <path d="M10 6c5-2 11 0 13 5 1 2 1 4 .6 6L55 48a4.5 4.5 0 0 1-6.4 6.4L17 22.4c-2 .5-4 .4-6-.6-5-2-7-8-5-13l7 7 5-1 1-5Z" />
-    </>,
-  );
-
-export const IcRadio = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <rect x="35" y="2" width="5" height="16" rx="2" />
-      <path d="M22 14h22a5 5 0 0 1 5 5v36a5 5 0 0 1-5 5H22a5 5 0 0 1-5-5V19a5 5 0 0 1 5-5Zm3 7v10h16V21Zm0 16v3h16v-3Zm0 7v3h16v-3Zm0 7v3h16v-3Z" />
-    </>,
-  );
-
-export const IcSkull = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <path d="M32 6c-10 0-17 7-17 16 0 5 2 9 5 11v6h24v-6c3-2 5-6 5-11 0-9-7-16-17-16Zm-7 13a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm14 0a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm-7 10 3 5h-6Z" />
-      <path d="M8 40l4-4 20 9 20-9 4 4-15 7 15 7-4 4-20-9-20 9-4-4 15-7Z" />
-    </>,
-  );
-
-export const IcChart = ({ size }: P) =>
-  svg(
-    size,
-    <path d="M10 6h44a4 4 0 0 1 4 4v44a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4Zm8 22v20h6V28Zm11-10v30h6V18Zm11 16v14h6V34Z" />,
-  );
-
-export const IcGate = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <rect x="6" y="40" width="10" height="20" rx="2" />
-      <circle cx="11" cy="40" r="6" />
-      <path d="M14 36l36-28 5 6-36 28Z" />
-      <path d="M22 30l4 5 5-4-4-5ZM34 21l4 5 5-4-4-5Z" fill="#1d1e20" opacity=".55" />
-    </>,
-  );
-
-export const IcToolbox = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <path d="M24 10h16a4 4 0 0 1 4 4v4h-5v-3H25v3h-5v-4a4 4 0 0 1 4-4Z" />
-      <path d="M8 20h48a4 4 0 0 1 4 4v8H4v-8a4 4 0 0 1 4-4Z" />
-      <path d="M4 35h22v4h12v-4h22v17a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4Z" />
-    </>,
-  );
-
-export const IcClipboard = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <path d="M24 4h16a3 3 0 0 1 3 3v3H21V7a3 3 0 0 1 3-3Z" />
-      <path d="M14 8h4v6h28V8h4a4 4 0 0 1 4 4v46a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4Zm5 16v4h26v-4Zm0 10v4h26v-4Zm0 10v4h26v-4Z" />
-    </>,
-  );
-
-/** בדיקה תקופתית: כלים + לוח שנה קטן */
+/** בדיקה תקופתית: מפתח + לוח שנה קטן */
 export const IcToolsCal = ({ size, star }: P & { star?: boolean }) => (
   <span className="mdt-ic-combo">
-    <IcTools size={size} />
+    <IcWrenchCheck size={size} />
     <span className="mdt-ic-mini">
-      <IcCalendar size={(size ?? 56) * 0.42} />
+      <IcCalendarSmall size={(size ?? 56) * 0.42} />
       {star && <b>★</b>}
     </span>
   </span>
 );
+
+/** רשימת תקלות */
+export const IcClipboard = ({ size }: P) =>
+  svg(
+    size,
+    <>
+      <path d="M24 4h16a3 3 0 0 1 3 3v3H21V7a3 3 0 0 1 3-3Z" opacity=".55" />
+      <path d="M14 8h4v6h28V8h4a4 4 0 0 1 4 4v46a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4Z" />
+      <path d="M19 26h26v4H19Zm0 10h26v4H19Zm0 10h16v4H19Z" fill="#000" opacity=".45" />
+      <circle cx="46" cy="48" r="7" fill="#000" opacity=".45" />
+      <path d="M43.5 48.5l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </>,
+  );
 
 export const IcHome = ({ size = 24 }: P) =>
   svg(size, <path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3Z" />, '0 0 24 24');
@@ -126,10 +167,10 @@ export const IcBattery = ({ size = 16 }: P) =>
 /** תג מפקד צוות — מגן עם כנפיים */
 export const IcCommander = ({ size = 40 }: P) => (
   <svg width={size} height={size * 0.75} viewBox="0 0 64 48" aria-hidden="true">
-    <path d="M32 4 44 9v12c0 10-5 18-12 22-7-4-12-12-12-22V9Z" fill="#2ecc40" />
-    <path d="M32 10l7 3v8c0 6-3 11-7 14-4-3-7-8-7-14v-8Z" fill="#1f9a2c" />
+    <path d="M32 4 44 9v12c0 10-5 18-12 22-7-4-12-12-12-22V9Z" fill="#ffb020" />
+    <path d="M32 10l7 3v8c0 6-3 11-7 14-4-3-7-8-7-14v-8Z" fill="#c77800" />
     {[0, 1, 2].map((i) => (
-      <g key={i} fill="#2ecc40">
+      <g key={i} fill="#ffb020">
         <path d={`M${18 - i * 5} ${12 + i * 7}h-${10 - i * 2}l3 5h${9 - i * 2}Z`} />
         <path d={`M${46 + i * 5} ${12 + i * 7}h${10 - i * 2}l-3 5h-${9 - i * 2}Z`} />
       </g>
@@ -138,22 +179,22 @@ export const IcCommander = ({ size = 40 }: P) => (
 );
 
 export const IcWheel = ({ size = 30 }: P) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#1e88e5" strokeWidth="2.4" aria-hidden="true">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2.4" aria-hidden="true">
     <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="2.4" fill="#1e88e5" />
+    <circle cx="12" cy="12" r="2.4" fill="#ff6b35" />
     <path d="M3.5 10.5h6M14.5 10.5h6M12 14.5V21" />
   </svg>
 );
 
 /** סימן מים ברקע — מגן עם להבה (גנרי, לא הסמל הרשמי) */
 export const Watermark = () => (
-  <svg width="560" height="560" viewBox="0 0 200 200" fill="none" stroke="#2a2a2a" strokeWidth="5" aria-hidden="true">
+  <svg width="560" height="560" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="5" aria-hidden="true">
     <path d="M100 28 152 46v44c0 38-22 66-52 80-30-14-52-42-52-80V46Z" />
-    <path d="M100 52c10 14 22 24 22 44a22 22 0 0 1-44 0c0-10 4-16 9-22 0 8 4 12 8 12-2-12 0-24 5-34Z" fill="#2a2a2a" stroke="none" />
+    <path d="M100 52c10 14 22 24 22 44a22 22 0 0 1-44 0c0-10 4-16 9-22 0 8 4 12 8 12-2-12 0-24 5-34Z" fill="currentColor" stroke="none" />
     {[0, 1, 2, 3, 4].map((i) => (
       <g key={i}>
-        <ellipse cx={34 - i * 3} cy={70 + i * 22} rx="9" ry="4" transform={`rotate(${-50 + i * 14} ${34 - i * 3} ${70 + i * 22})`} fill="#2a2a2a" stroke="none" />
-        <ellipse cx={166 + i * 3} cy={70 + i * 22} rx="9" ry="4" transform={`rotate(${50 - i * 14} ${166 + i * 3} ${70 + i * 22})`} fill="#2a2a2a" stroke="none" />
+        <ellipse cx={34 - i * 3} cy={70 + i * 22} rx="9" ry="4" transform={`rotate(${-50 + i * 14} ${34 - i * 3} ${70 + i * 22})`} fill="currentColor" stroke="none" />
+        <ellipse cx={166 + i * 3} cy={70 + i * 22} rx="9" ry="4" transform={`rotate(${50 - i * 14} ${166 + i * 3} ${70 + i * 22})`} fill="currentColor" stroke="none" />
       </g>
     ))}
   </svg>

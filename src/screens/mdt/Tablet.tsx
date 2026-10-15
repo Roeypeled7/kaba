@@ -3,7 +3,7 @@ import { INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
 import { audioReady, playAlarm, unlockAudio, useSoundLoop } from '../../sound';
-import { IcBack, IcBattery, IcCalendar, IcChart, IcCrew, IcGate, IcHome, IcMenu, IcRadio, IcSkull, IcTools, IcToolbox, Watermark } from './icons';
+import { IcBack, IcBarrier, IcBattery, IcFlame, IcGauge, IcHazard, IcHelmet, IcHome, IcHydrant, IcMenu, IcWalkie, IcWrenchCheck, Watermark } from './icons';
 import { useLocal, type Ctx, type Send } from './shared';
 import Events from './Events';
 import Crew from './Crew';
@@ -21,15 +21,16 @@ const H = 800;
 const BEZEL_X = 46;
 const BEZEL_Y = 42;
 
-const PAGES: Record<string, { title: string; Icon: (p: { size?: number }) => JSX.Element; Comp: (c: Ctx) => JSX.Element }> = {
-  events: { title: 'האירועים שלי', Icon: IcCalendar, Comp: Events },
-  crew: { title: 'צוות ברכב', Icon: IcCrew, Comp: Crew },
-  checks: { title: 'בדיקות רכב', Icon: IcTools, Comp: Checks },
-  radios: { title: 'צימוד מכשירי קשר', Icon: IcRadio, Comp: Radios },
-  hazmat: { title: 'חומ״ס', Icon: IcSkull, Comp: Hazmat },
-  dashboard: { title: 'דאשבורד', Icon: IcChart, Comp: Dashboard },
-  gates: { title: 'פתיחת שערים', Icon: IcGate, Comp: Gates },
-  tools: { title: 'כלי עזר', Icon: IcToolbox, Comp: Tools },
+/** צבע האריח — גוני אש ובטיחות: אדום, כתום, ענבר, ירוק-בטיחות, ואפור-פלדה לציוד */
+const PAGES: Record<string, { title: string; color: string; Icon: (p: { size?: number }) => JSX.Element; Comp: (c: Ctx) => JSX.Element }> = {
+  events: { title: 'האירועים שלי', color: '#ff3d2e', Icon: IcFlame, Comp: Events },
+  crew: { title: 'צוות ברכב', color: '#ffb020', Icon: IcHelmet, Comp: Crew },
+  checks: { title: 'בדיקות רכב', color: '#3ddc84', Icon: IcWrenchCheck, Comp: Checks },
+  radios: { title: 'צימוד מכשירי קשר', color: '#ff7a1a', Icon: IcWalkie, Comp: Radios },
+  hazmat: { title: 'חומ״ס', color: '#ffd400', Icon: IcHazard, Comp: Hazmat },
+  dashboard: { title: 'דאשבורד', color: '#ff5c3a', Icon: IcGauge, Comp: Dashboard },
+  gates: { title: 'פתיחת שערים', color: '#9fb3c8', Icon: IcBarrier, Comp: Gates },
+  tools: { title: 'כלי עזר', color: '#e8322a', Icon: IcHydrant, Comp: Tools },
 };
 const HOME_ORDER = ['events', 'crew', 'checks', 'radios', 'hazmat', 'dashboard', 'gates', 'tools'];
 
@@ -86,7 +87,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
               <i />
               <i />
             </div>
-            <div className="mdt-brand">GAMBER · RUGGED</div>
+            <div className="mdt-brand">RUGGED · MDT</div>
           </>
         )}
         <div className="mdt mdt-screen">
@@ -139,7 +140,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
                     {HOME_ORDER.map((k) => {
                       const P = PAGES[k];
                       return (
-                        <button key={k} onClick={() => go(k)}>
+                        <button key={k} style={{ '--tc': P.color } as React.CSSProperties} onClick={() => go(k)}>
                           <P.Icon size={20} /> {P.title}
                         </button>
                       );
@@ -171,10 +172,10 @@ function Home(ctx: Ctx) {
           const P = PAGES[k];
           const badge = k === 'events' && activeInc ? { n: '!', c: 'red' } : k === 'checks' ? checksBadge(checks.data, ctx.state.simTime) : null;
           return (
-            <button key={k} className="mdt-tile" onClick={() => ctx.go(k)}>
+            <button key={k} className="mdt-tile" style={{ '--tc': P.color } as React.CSSProperties} onClick={() => ctx.go(k)}>
               {badge && <span className={`mdt-badge ${badge.c}`}>{badge.n}</span>}
               <span className="mdt-tile-ic">
-                <P.Icon size={64} />
+                <P.Icon size={58} />
               </span>
               <span className="mdt-tile-lbl">{P.title}</span>
             </button>
