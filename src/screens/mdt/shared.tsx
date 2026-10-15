@@ -53,10 +53,11 @@ export function splitName(name: string): [string, string] {
   return i < 0 ? [name, ''] : [name.slice(0, i), name.slice(i + 1)];
 }
 
+/** גוון קבוע לכל שם — בתחום צר של פלדה כחלחלה, כדי לא להוסיף צבעים לערכה */
 function hue(s: string) {
   let h = 0;
-  for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return h;
+  for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 40;
+  return 200 + h;
 }
 
 /** "תמונת פספורט" — ראשי תיבות על רקע קבוע לכל שם */

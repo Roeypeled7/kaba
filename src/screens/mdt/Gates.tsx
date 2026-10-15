@@ -71,7 +71,7 @@ export default function Gates({ st, v }: Ctx) {
                   ))}
                 </g>
                 <circle cx="29" cy="62" r="7" fill="#8a8d92" />
-                <circle cx="29" cy="42" r="6" fill={g.s === 'closed' ? '#e53935' : g.s === 'open' ? '#2ecc40' : '#ffc107'} />
+                <circle cx="29" cy="42" r="6" fill={g.s === 'closed' ? '#ff3d2e' : g.s === 'open' ? '#c9d3de' : '#ffb020'} />
               </svg>
               <div className="mdt-gate-st">
                 {LABEL[g.s]}

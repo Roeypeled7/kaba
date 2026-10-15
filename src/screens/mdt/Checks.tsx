@@ -136,12 +136,12 @@ export default function Checks(ctx: Ctx) {
 function ChecksHome({ v, state, go }: Ctx) {
   const { data } = useChecks(v, state.simTime);
   const now = state.simTime;
-  const badge = (n: number) => <span className={`mdt-badge ${n <= 0 ? 'red' : 'green'}`}>{n}</span>;
+  const badge = (n: number) => <span className={`mdt-badge ${n <= 0 ? 'red' : 'steel'}`}>{n}</span>;
   const faults = openFaults(data).length;
   const tiles = [
-    { k: 'daily', c: '#3ddc84', ic: <IcTools size={64} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
-    { k: 'weekly', c: '#ffb020', ic: <IcToolsCal size={64} star />, b: badge(daysLeft(data, 'weekly', now)) },
-    { k: 'semi', c: '#ff7a1a', ic: <IcToolsCal size={64} />, b: badge(daysLeft(data, 'semi', now)) },
+    { k: 'daily', c: '#ffb020', ic: <IcTools size={64} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
+    { k: 'weekly', c: '#c9d3de', ic: <IcToolsCal size={64} star />, b: badge(daysLeft(data, 'weekly', now)) },
+    { k: 'semi', c: '#c9d3de', ic: <IcToolsCal size={64} />, b: badge(daysLeft(data, 'semi', now)) },
     { k: 'faults', c: '#ff3d2e', ic: <IcClipboard size={64} />, b: faults ? <span className="mdt-badge red">{faults}</span> : null },
   ];
   return (

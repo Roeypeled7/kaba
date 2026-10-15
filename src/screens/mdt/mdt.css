@@ -12,8 +12,10 @@
   --mdt-fire: #ff3d2e;
   --mdt-fire-2: #c81e14;
   --mdt-amber: #ffb020;
-  --mdt-orange: #ff7a1a;
-  --mdt-ok: #3ddc84;
+  --mdt-steel: #c9d3de;
+  /* ערכה של שלושה צבעים: אש, ענבר, פלדה. "תקין" = ענבר, "תקלה" = אש */
+  --mdt-orange: var(--mdt-amber);
+  --mdt-ok: var(--mdt-amber);
   --mdt-bad: #ff3d2e;
   /* ברירת מחדל לאריח/כפתור בלי צבע משלו */
   --tc: var(--mdt-amber);
@@ -66,7 +68,7 @@
 }
 .mdt-bar-title {
   font-weight: 800; font-size: 18px; padding: 4px 18px; border-radius: 20px;
-  background: linear-gradient(135deg, var(--mdt-fire), var(--mdt-fire-2)); color: #fff; box-shadow: 0 2px 8px rgba(255, 61, 46, 0.4);
+  background: var(--mdt-fire-2); color: #fff;
 }
 .mdt-bar-r { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 17px; }
 .mdt-bar-l { display: flex; justify-content: flex-end; gap: 10px; }
@@ -85,7 +87,7 @@
   display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
   background: color-mix(in srgb, var(--c, #888) 22%, transparent); color: var(--c, #ccc); white-space: nowrap; margin-inline-start: 8px;
 }
-.mdt-stdot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c, #888); box-shadow: 0 0 6px var(--c, #888); }
+.mdt-stdot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c, #888); }
 .mdt-stdot.big { font-size: 22px; padding: 6px 16px; }
 .mdt-stdot.big::before { width: 14px; height: 14px; }
 .mdt-stdot.amb { --c: #ff6b6b; }
@@ -111,16 +113,9 @@
   transition: transform 0.08s, border-color 0.15s;
 }
 .mdt-tile::before { content: ''; position: absolute; inset: 0 0 auto; height: 5px; background: var(--tc); }
-.mdt-tile::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.18;
-  background: radial-gradient(circle at 50% 30%, var(--tc), transparent 60%);
-}
 .mdt-tile:hover { border-color: color-mix(in srgb, var(--tc) 60%, var(--mdt-line)); }
 .mdt-tile:active { transform: scale(0.97); }
-.mdt-tile-ic {
-  flex: 1; display: grid; place-items: center; color: var(--tc); z-index: 1;
-  filter: drop-shadow(0 6px 12px color-mix(in srgb, var(--tc) 50%, transparent));
-}
+.mdt-tile-ic { flex: 1; display: grid; place-items: center; color: var(--tc); z-index: 1; }
 .mdt-tile-lbl { z-index: 1; margin: 0 14px; padding: 9px 0 13px; font-weight: 700; font-size: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .mdt-badge {
   position: absolute; top: 12px; left: 12px; min-width: 38px; height: 38px; padding: 0 6px; border-radius: 19px; z-index: 2;
@@ -128,7 +123,7 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
 }
 .mdt-badge.red { background: var(--mdt-fire); }
-.mdt-badge.green { background: #1fae5e; }
+.mdt-badge.steel { background: #4a5968; }
 .mdt-ic-combo { position: relative; display: inline-block; }
 .mdt-ic-mini { position: absolute; bottom: 2px; left: -14px; color: var(--tc); }
 .mdt-ic-mini b { position: absolute; inset: 0; display: grid; place-items: center; padding-top: 6px; font-size: 9px; color: var(--mdt-panel); }
@@ -170,7 +165,7 @@
 
 .mdt-avatar {
   display: inline-grid; place-items: center; flex: none; border-radius: 6px; font-weight: 700; color: #fff; letter-spacing: -0.04em;
-  background: linear-gradient(180deg, hsl(var(--h) 28% 48%), hsl(var(--h) 32% 30%)); box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, hsl(var(--h) 14% 46%), hsl(var(--h) 18% 30%)); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 /* ── כפתורים ── */
@@ -185,11 +180,11 @@
 .mdt-btn.big { padding: 16px 30px; font-size: 18px; }
 .mdt-btn.huge { padding: 20px 44px; font-size: 26px; font-weight: 800; }
 /* "cyan" הוא הכפתור הראשי — עכשיו בצבע ענבר */
-.mdt-btn.cyan { background: linear-gradient(180deg, #ffc247, var(--mdt-amber)); color: #1a1200; border-color: #c77800; box-shadow: 0 3px 0 #8a5300, 0 6px 14px rgba(255, 176, 32, 0.3); }
+.mdt-btn.cyan { background: var(--mdt-amber); color: #1a1200; border-color: #c77800; box-shadow: 0 3px 0 #8a5300; }
 .mdt-btn.white { background: #fff; color: #111; border-color: #fff; }
-.mdt-btn.fire { background: linear-gradient(180deg, #ff5a4c, var(--mdt-fire-2)); color: #fff; border-color: #8e1d1b; box-shadow: 0 3px 0 #6b0f0b, 0 6px 14px rgba(255, 61, 46, 0.35); }
-.mdt-btn.warn { background: linear-gradient(180deg, #ff9b4a, var(--mdt-orange)); color: #1a0d00; border-color: #b04e00; box-shadow: 0 3px 0 #7a3600; }
-.mdt-btn.ok { background: linear-gradient(180deg, #4ae796, #1fae5e); color: #04200f; border-color: #167a43; box-shadow: 0 3px 0 #0f4f2c; }
+.mdt-btn.fire { background: var(--mdt-fire); color: #fff; border-color: #8e1d1b; box-shadow: 0 3px 0 #6b0f0b; }
+.mdt-btn.warn { background: var(--mdt-amber); color: #1a1200; border-color: #c77800; box-shadow: 0 3px 0 #8a5300; }
+.mdt-btn.ok { background: var(--mdt-steel); color: #10151b; border-color: #8e9cab; box-shadow: 0 3px 0 #5a6978; }
 .mdt-btn.ghost { background: transparent; }
 .mdt-link { background: none; border: 0; color: var(--mdt-amber); text-decoration: underline; font-size: 14px; }
 .mdt-actions { display: flex; align-items: center; gap: 14px; }
@@ -199,14 +194,14 @@
 .mdt-check-inline { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; color: inherit; }
 .mdt-check-inline input { width: 18px; height: 18px; accent-color: var(--mdt-amber); }
 .mdt-progress { display: block; height: 8px; background: var(--mdt-line); border-radius: 4px; overflow: hidden; flex: 1; min-width: 80px; }
-.mdt-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--mdt-amber), var(--mdt-fire)); transition: width 0.3s; }
+.mdt-progress i { display: block; height: 100%; background: var(--mdt-amber); transition: width 0.3s; }
 
 /* ── טאבים ── */
 .mdt-tabs { display: flex; gap: 4px; flex: none; }
 .mdt-tabs button { background: var(--mdt-bg-2); color: var(--mdt-dim); border: 1px solid var(--mdt-line); border-bottom: 0; padding: 10px 26px; font-weight: 700; font-size: 16px; border-radius: 10px 10px 0 0; display: inline-flex; gap: 8px; align-items: center; }
 .mdt-tabs button.on { background: var(--mdt-panel); color: #fff; box-shadow: inset 0 3px 0 var(--mdt-fire); }
 .mdt-tabs + * { margin-top: -14px; border-top-right-radius: 0; }
-.mdt-live { width: 10px; height: 10px; border-radius: 50%; background: var(--mdt-fire); box-shadow: 0 0 8px var(--mdt-fire); animation: mdt-pulse 1s infinite; }
+.mdt-live { width: 10px; height: 10px; border-radius: 50%; background: var(--mdt-fire); animation: mdt-pulse 1s infinite; }
 @keyframes mdt-pulse { 50% { opacity: 0.3; } }
 
 /* ── בחירת רכב ── */
@@ -220,7 +215,7 @@
 .mdt-pick:hover { border-color: var(--mdt-amber); }
 .mdt-pick b { color: var(--mdt-amber); font-size: 24px; }
 .mdt-pick span { font-size: 13px; }
-.mdt-pick-dot { position: absolute; top: 8px; left: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+.mdt-pick-dot { position: absolute; top: 8px; left: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
 
 /* ── צוות ברכב ── */
 .mdt-crew { display: grid; grid-template-columns: 1fr 470px; grid-template-rows: 1fr auto; gap: 16px 18px; }
@@ -244,14 +239,14 @@
 .mdt-pair { width: 150px; align-self: stretch; display: grid; place-items: center; border-inline-start: 1px solid var(--mdt-line); font-weight: 700; color: var(--mdt-dim); }
 .mdt-pair.on { color: var(--mdt-amber); }
 .mdt-person.dev { height: 170px; }
-.mdt-person.dev svg { color: var(--mdt-orange); }
-.mdt-person.dev.taken { border-color: var(--mdt-orange); background: #2e2418; }
+.mdt-person.dev svg { color: var(--mdt-steel); }
+.mdt-person.dev.taken { border-color: var(--mdt-amber); background: #2e2418; }
 .mdt-batt { position: relative; width: 70%; height: 14px; background: var(--mdt-line); border-radius: 3px; overflow: hidden; margin: 3px 0; }
 .mdt-batt i { position: absolute; inset: 0 auto 0 0; background: var(--mdt-ok); }
 .mdt-batt.low i { background: var(--mdt-amber); }
 .mdt-batt em { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-style: normal; font-weight: 700; color: #fff; text-shadow: 0 0 2px #000; }
 .mdt-vradio { display: flex; align-items: center; gap: 12px; margin: 10px 14px 0; padding: 10px 12px; background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px; }
-.mdt-vradio-ic { color: var(--mdt-orange); }
+.mdt-vradio-ic { color: var(--mdt-steel); }
 
 /* ── מודאל ── */
 .mdt-modal-wrap { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 30; }
@@ -290,9 +285,9 @@
 .mdt-alarm-units span.me { background: #fff; color: #b71c1c; }
 .mdt-alarm .mdt-btn { margin-top: 14px; font-size: 26px; padding: 20px 50px; color: #b71c1c; }
 .mdt-sev { font-size: 15px; font-weight: 800; padding: 3px 12px; border-radius: 20px; color: #111; }
-.mdt-sev.s1 { background: #ffd166; }
-.mdt-sev.s2 { background: #ff9f1c; }
-.mdt-sev.s3 { background: #ef476f; color: #fff; }
+.mdt-sev.s1 { background: var(--mdt-steel); }
+.mdt-sev.s2 { background: var(--mdt-amber); }
+.mdt-sev.s3 { background: var(--mdt-fire); color: #fff; }
 
 /* ── האירועים שלי ── */
 .mdt-idle { align-items: center; justify-content: center; gap: 18px; text-align: center; font-size: 20px; }
@@ -311,7 +306,7 @@
 .mdt-steps li.done { color: #ddd; }
 .mdt-steps li.done i, .mdt-steps li.done::before, .mdt-steps li.now::before { background: var(--mdt-amber); color: #1a1200; }
 .mdt-steps li.now { color: #fff; font-weight: 800; }
-.mdt-steps li.now i { background: var(--mdt-fire); color: #fff; box-shadow: 0 0 0 4px rgba(255, 61, 46, 0.4), 0 0 14px var(--mdt-fire); }
+.mdt-steps li.now i { background: var(--mdt-fire); color: #fff; box-shadow: 0 0 0 4px rgba(255, 61, 46, 0.35); }
 .mdt-act-row { display: flex; align-items: center; gap: 20px; padding: 10px 18px; }
 .mdt-eta { font-size: 18px; color: #ccc; }
 .mdt-eta b { font-size: 26px; color: #fff; }
@@ -333,7 +328,7 @@
 .mdt-inc-st { font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 12px; background: var(--mdt-line); }
 .mdt-inc-st.i-closed { color: var(--mdt-dim); }
 .mdt-inc-st.i-active, .mdt-inc-st.i-dispatched { background: #4a1a16; color: #ff8a80; }
-.mdt-inc-st.i-controlled { background: #123d26; color: var(--mdt-ok); }
+.mdt-inc-st.i-controlled { background: #3a2a08; color: var(--mdt-amber); }
 
 /* ── בדיקות ── */
 .mdt-check-list { display: flex; flex-direction: column; gap: 8px; }
@@ -344,7 +339,7 @@
 .mdt-crit { font-size: 11px; font-weight: 800; background: var(--mdt-fire); color: #fff; padding: 1px 7px; border-radius: 10px; margin-inline-start: 8px; vertical-align: middle; }
 .mdt-check-note { display: block; margin-top: 6px; width: 100%; background: var(--mdt-bg); color: #fff; border: 1px solid var(--mdt-line); border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 14px; }
 .mdt-yn { border: 2px solid var(--mdt-line); background: transparent; color: var(--mdt-dim); border-radius: 8px; padding: 9px 16px; font-weight: 700; font-size: 15px; }
-.mdt-yn.ok.on { background: var(--mdt-ok); border-color: var(--mdt-ok); color: #04200f; }
+.mdt-yn.ok.on { background: var(--mdt-amber); border-color: var(--mdt-amber); color: #1a1200; }
 .mdt-yn.bad.on { background: var(--mdt-fire); border-color: var(--mdt-fire); color: #fff; }
 .mdt-row.fault { gap: 16px; }
 .mdt-row.fault.closed { opacity: 0.5; }
@@ -389,7 +384,7 @@
 .mdt-kpi.warn b { color: var(--mdt-fire); }
 .mdt-bars { display: flex; align-items: flex-end; gap: 10px; height: 230px; padding: 10px 20px 0; flex: none; }
 .mdt-bars > div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
-.mdt-bars i { width: 100%; background: linear-gradient(180deg, var(--mdt-amber), var(--mdt-fire)); border-radius: 4px 4px 0 0; min-height: 2px; }
+.mdt-bars i { width: 100%; background: var(--mdt-amber); border-radius: 4px 4px 0 0; min-height: 2px; }
 .mdt-bars em { font-style: normal; font-size: 12px; color: var(--mdt-dim); }
 .mdt-bars span { font-size: 13px; color: #fff; }
 
@@ -399,7 +394,7 @@
 .mdt-gate h3 { margin: 0; font-size: 22px; }
 .mdt-gate-art { width: 100%; height: 190px; }
 .mdt-gate-st { font-size: 20px; font-weight: 800; }
-.mdt-gate.open .mdt-gate-st { color: var(--mdt-ok); }
+.mdt-gate.open .mdt-gate-st { color: var(--mdt-steel); }
 .mdt-gate.opening .mdt-gate-st, .mdt-gate.closing .mdt-gate-st { color: var(--mdt-amber); }
 .mdt-gate-btns { display: flex; gap: 14px; }
 

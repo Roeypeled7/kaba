@@ -179,9 +179,9 @@ export const IcCommander = ({ size = 40 }: P) => (
 );
 
 export const IcWheel = ({ size = 30 }: P) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff6b35" strokeWidth="2.4" aria-hidden="true">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#c9d3de" strokeWidth="2.4" aria-hidden="true">
     <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="2.4" fill="#ff6b35" />
+    <circle cx="12" cy="12" r="2.4" fill="#c9d3de" />
     <path d="M3.5 10.5h6M14.5 10.5h6M12 14.5V21" />
   </svg>
 );

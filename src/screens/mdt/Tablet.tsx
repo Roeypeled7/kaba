@@ -21,16 +21,16 @@ const H = 800;
 const BEZEL_X = 46;
 const BEZEL_Y = 42;
 
-/** צבע האריח — גוני אש ובטיחות: אדום, כתום, ענבר, ירוק-בטיחות, ואפור-פלדה לציוד */
+/** צבע האריח — שלושה צבעים בלבד: אדום-אש למבצעי, ענבר לצוות וציוד, פלדה לכלים */
 const PAGES: Record<string, { title: string; color: string; Icon: (p: { size?: number }) => JSX.Element; Comp: (c: Ctx) => JSX.Element }> = {
   events: { title: 'האירועים שלי', color: '#ff3d2e', Icon: IcFlame, Comp: Events },
   crew: { title: 'צוות ברכב', color: '#ffb020', Icon: IcHelmet, Comp: Crew },
-  checks: { title: 'בדיקות רכב', color: '#3ddc84', Icon: IcWrenchCheck, Comp: Checks },
-  radios: { title: 'צימוד מכשירי קשר', color: '#ff7a1a', Icon: IcWalkie, Comp: Radios },
-  hazmat: { title: 'חומ״ס', color: '#ffd400', Icon: IcHazard, Comp: Hazmat },
-  dashboard: { title: 'דאשבורד', color: '#ff5c3a', Icon: IcGauge, Comp: Dashboard },
-  gates: { title: 'פתיחת שערים', color: '#9fb3c8', Icon: IcBarrier, Comp: Gates },
-  tools: { title: 'כלי עזר', color: '#e8322a', Icon: IcHydrant, Comp: Tools },
+  checks: { title: 'בדיקות רכב', color: '#ffb020', Icon: IcWrenchCheck, Comp: Checks },
+  radios: { title: 'צימוד מכשירי קשר', color: '#c9d3de', Icon: IcWalkie, Comp: Radios },
+  hazmat: { title: 'חומ״ס', color: '#ff3d2e', Icon: IcHazard, Comp: Hazmat },
+  dashboard: { title: 'דאשבורד', color: '#c9d3de', Icon: IcGauge, Comp: Dashboard },
+  gates: { title: 'פתיחת שערים', color: '#c9d3de', Icon: IcBarrier, Comp: Gates },
+  tools: { title: 'כלי עזר', color: '#ffb020', Icon: IcHydrant, Comp: Tools },
 };
 const HOME_ORDER = ['events', 'crew', 'checks', 'radios', 'hazmat', 'dashboard', 'gates', 'tools'];
 

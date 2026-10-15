@@ -141,7 +141,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
             <DarkTiles />
             <FitBoth a={v.pos} b={inc.pos} id={inc.id} />
             <Marker position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} />
-            <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#1fc3f1', weight: 4, dashArray: '8 8' }} />
+            <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#ffb020', weight: 4, dashArray: '8 8' }} />
             <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
             {others.map((x) => (
               <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
