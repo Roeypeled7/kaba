@@ -7,13 +7,13 @@ const svg = (size = 56, children: React.ReactNode, vb = '0 0 64 64') => (
   </svg>
 );
 
-/** להבה — האירועים שלי */
+/** להבה — האירועים שלי: צללית אחת ברורה עם להבה פנימית */
 export const IcFlame = ({ size }: P) =>
   svg(
     size,
     <>
-      <path d="M33 4c2 10 11 14 13 25 1 6-1 11-4 15 1-7-3-11-6-13 1 7-4 10-6 16-2-4-7-6-7-13 0-5 3-8 3-14 3 2 5 5 5 9 4-6 5-15 2-25Z" opacity=".55" />
-      <path d="M32 60c-11 0-19-8-19-18 0-8 5-12 7-19 3 3 5 6 5 10 2-3 3-6 3-10 7 5 12 12 12 19 0 10-8 18-8 18Zm0-6c4 0 7-3 7-7 0-4-3-7-5-10-1 3-3 5-5 6-2-2-3-4-3-6-2 3-3 6-3 9 0 4 4 8 9 8Z" />
+      <path d="M33 3c3 9 15 15 15 32a16 16 0 0 1-32 0c0-8 5-12 7-19 3 4 6 6 7 10 4-6 5-14 3-23Z" />
+      <path d="M32 29c3 5 8 8 8 15a8 8 0 0 1-16 0c0-4 2-6 3-9 1 2 3 3 4 5 2-3 2-7 1-11Z" fill="#000" opacity=".45" />
     </>,
   );
 
@@ -30,15 +30,18 @@ export const IcHelmet = ({ size }: P) =>
     </>,
   );
 
-/** מפתח ברגים + וי — בדיקות רכב */
+/** רשימת בדיקה — בדיקות רכב: לוח עם שלוש שורות מסומנות */
 export const IcWrenchCheck = ({ size }: P) =>
   svg(
     size,
     <>
-      <path d="M40 6a14 14 0 0 1 12 7l-9 9-6-1-1-6 9-9a14 14 0 0 0-5 0Zm-5 23 4 4L15 57a4.5 4.5 0 0 1-6.4-6.4Z" />
-      <path d="M38 8a15 15 0 0 1 17 17c-1 6-5 10-11 11l-4-4 7-7-7-7-7 7-4-4c1-6 5-10 9-13Z" opacity=".55" />
-      <circle cx="47" cy="47" r="13" />
-      <path d="M40.5 47.5l4.5 4.5 9-9" fill="none" stroke="#000" strokeOpacity=".55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 10h6V7a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v3h6a4 4 0 0 1 4 4v44a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4Zm10-1v5h16V9Z" />
+      {[26, 38, 50].map((y) => (
+        <g key={y}>
+          <path d={`M17 ${y - 1}l3 3 6-6`} fill="none" stroke="#000" strokeOpacity=".55" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="30" y={y - 3} width="17" height="4" rx="2" fill="#000" opacity=".45" />
+        </g>
+      ))}
     </>,
   );
 
@@ -136,16 +139,13 @@ export const IcToolsCal = ({ size, star }: P & { star?: boolean }) => (
   </span>
 );
 
-/** רשימת תקלות */
+/** תקלות פתוחות — משולש אזהרה */
 export const IcClipboard = ({ size }: P) =>
   svg(
     size,
     <>
-      <path d="M24 4h16a3 3 0 0 1 3 3v3H21V7a3 3 0 0 1 3-3Z" opacity=".55" />
-      <path d="M14 8h4v6h28V8h4a4 4 0 0 1 4 4v46a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4Z" />
-      <path d="M19 26h26v4H19Zm0 10h26v4H19Zm0 10h16v4H19Z" fill="#000" opacity=".45" />
-      <circle cx="46" cy="48" r="7" fill="#000" opacity=".45" />
-      <path d="M43.5 48.5l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M32 6 61 56H3Z" />
+      <path d="M32 22a3.5 3.5 0 0 1 3.5 3.5l-1.2 13a2.3 2.3 0 0 1-4.6 0l-1.2-13A3.5 3.5 0 0 1 32 22Zm0 21a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" fill="#000" opacity=".55" />
     </>,
   );
 
