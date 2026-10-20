@@ -6,8 +6,10 @@ const CORE = [
   { hash: '#/dispatch', title: 'קבלה ושיגור', desc: 'שיחות נכנסות, פתיחת אירוע, הזנקה אוטומטית, ניהול אירועים ולוח כוחות' },
   { hash: '#/comms', title: 'מערכת קשר', desc: 'ערוצי קשר, תעבורה לפי אירוע, שידור ליחידות, תיאום מד״א ומשטרה' },
   { hash: '#/map', title: 'מפה', desc: 'מפת מצב חיה — תחנות, רכבים בתנועה, אירועים, אמבולנסים ובתי חולים' },
-  { hash: '#/mdt', title: 'טאבלט רכב', desc: 'המסך שבתא הנהג: הזנקות וסטטוסים, צוות ברכב, בדיקות רכב, צימוד קשר, חומ״ס, שערים וכלי עזר' },
 ];
+
+/** הטאבלט הוא עמוד נפרד (tablet/) — אותו מנוע, קישור משלו */
+const TABLET_URL = 'tablet/';
 
 const PICK_KEY = 'kaba.launcher.stations';
 const DEFAULT_PICK: [number, number] = [1, 4];
@@ -93,6 +95,24 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
                 </a>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="station-launch">
+          <h2>טאבלט רכב</h2>
+          <div className="launch-card tablet-card">
+            <div>
+              <h2>המסך שבתא הנהג</h2>
+              <p>הזנקות וסטטוסים, צוות ברכב, בדיקות רכב, צימוד קשר, חומ״ס, שערים וכלי עזר. עמוד נפרד עם קישור משלו — מסונכרן לאותה הדמיה.</p>
+            </div>
+            <div className="row gap">
+              <button className="btn primary" onClick={() => window.open(TABLET_URL, 'kaba-tablet', 'width=1372,height=900,left=80,top=60')}>
+                פתח בחלון
+              </button>
+              <a className="btn ghost" href={TABLET_URL}>
+                כאן
+              </a>
+            </div>
           </div>
         </section>
 

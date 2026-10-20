@@ -394,3 +394,5 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .veh-mdt { margin-inline-start: auto; font-size: 11px; color: var(--dim); text-decoration: none; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; }
 .veh-mdt:hover { color: var(--text); border-color: var(--dim); }
+.tablet-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.tablet-card h2 { color: var(--text); font-size: 16px; text-transform: none; letter-spacing: 0; }

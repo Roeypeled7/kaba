@@ -57,7 +57,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
   const scale = useFit(bezel ? W + 2 * BEZEL_X : W, bezel ? H + 2 * BEZEL_Y : H, bezel ? 24 : 0);
   const [drawer, setDrawer] = useState(false);
 
-  const base = v ? `#/mdt/${encodeURIComponent(v.id)}` : '#/mdt';
+  const base = v ? `#/${encodeURIComponent(v.id)}` : '#/';
   const go = (sub: string) => {
     setDrawer(false);
     location.hash = sub ? `${base}/${sub}` : base;
@@ -65,7 +65,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
 
   const page = segs[0] ? PAGES[segs[0]] : undefined;
   const subTitle = !v ? 'בחירת רכב' : !page ? 'מסך הבית' : segs[0] === 'checks' && segs[1] ? CHECK_TITLE[segs[1]] ?? page.title : page.title;
-  const back = () => (!v ? (location.hash = '#/') : segs.length > 1 ? go(segs.slice(0, -1).join('/')) : segs.length ? go('') : (location.hash = '#/mdt'));
+  const back = () => (!v ? (location.href = '../') : segs.length > 1 ? go(segs.slice(0, -1).join('/')) : segs.length ? go('') : (location.hash = '#/'));
 
   // הזנקה שממתינה לאישור ושכוללת את הרכב הזה
   const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
@@ -99,7 +99,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
             </div>
             <div className="mdt-bar-title">{v && st ? `${stationShort(st)} ${v.unit}` : 'טאבלט רכב'}</div>
             <div className="mdt-bar-l">
-              <button className="mdt-iconbtn" onClick={() => (v ? go('') : (location.hash = '#/mdt'))} aria-label="מסך הבית">
+              <button className="mdt-iconbtn" onClick={() => (v ? go('') : (location.hash = '#/'))} aria-label="מסך הבית">
                 <IcHome />
               </button>
               <button className="mdt-iconbtn" onClick={() => setDrawer(true)} aria-label="תפריט">
@@ -148,9 +148,9 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
                     <hr />
                   </>
                 )}
-                <button onClick={() => ((location.hash = '#/mdt'), setDrawer(false))}>⇄ החלפת רכב</button>
+                <button onClick={() => ((location.hash = '#/'), setDrawer(false))}>⇄ החלפת רכב</button>
                 <button onClick={() => (setFrame(bezel ? 'full' : 'bezel'), setDrawer(false))}>{bezel ? '⛶ מסך מלא' : '▭ תצוגת טאבלט'}</button>
-                <button onClick={() => (location.hash = '#/')}>↩ חזרה למשל״ט</button>
+                <button onClick={() => (location.href = '../')}>↩ למשל״ט</button>
                 <div className="mdt-drawer-f">גרסה {MDT_VERSION} · מחובר להדמיה</div>
               </nav>
             </>
@@ -201,7 +201,7 @@ function Picker({ state }: { state: SimState }) {
           <h3>{stationShort(main)}</h3>
           <div className="mdt-pick-row">
             {vehicles.map((x) => (
-              <a key={x.id} className="mdt-pick" href={`#/mdt/${encodeURIComponent(x.id)}`}>
+              <a key={x.id} className="mdt-pick" href={`#/${encodeURIComponent(x.id)}`}>
                 <span className={`mdt-pick-dot st-${x.status}`} />
                 <b className="mono">{x.unit}</b>
                 <span>{label(x)}</span>

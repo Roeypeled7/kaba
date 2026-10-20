@@ -252,7 +252,7 @@ function VehicleCard({ v, state, send }: { v: Vehicle; state: SimState; send: Se
       <div className="veh-head">
         <span className="veh-sign mono">{v.unit}</span>
         <span className="dim">{UNIT_LABEL[v.type]}</span>
-        <a className="veh-mdt" href={`#/mdt/${encodeURIComponent(v.id)}`} title="פתח את הטאבלט של הרכב">
+        <a className="veh-mdt" href={`tablet/#/${encodeURIComponent(v.id)}`} target="_blank" rel="noopener" title="פתח את הטאבלט של הרכב בחלון נפרד">
           טאבלט
         </a>
       </div>

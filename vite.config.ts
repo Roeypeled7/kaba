@@ -6,5 +6,7 @@ export default defineConfig({
   // נתיבים יחסיים — האתר עובד גם בתת-תיקייה (GitHub Pages: /kaba/)
   base: './',
   server: { port: 5180 },
+  // שני עמודים: המשל״ט (/) והטאבלט (/tablet/) — אותו מנוע, קישור נפרד
+  build: { rollupOptions: { input: { main: 'index.html', tablet: 'tablet/index.html' } } },
   worker: { format: 'es' },
 });

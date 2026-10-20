@@ -17,11 +17,9 @@ export const SCREENS = [
   { hash: '#/comms', title: 'מערכת קשר', short: 'קשר' },
   { hash: '#/station/1', title: 'עמדות תחנה', short: 'תחנות' },
   { hash: '#/map', title: 'מפה', short: 'מפה' },
-  { hash: '#/mdt', title: 'טאבלט רכב', short: 'טאבלט' },
 ];
 
-const navOn = (hash: string) =>
-  hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : hash === '#/mdt' ? location.hash.startsWith('#/mdt') : location.hash === hash;
+const navOn = (hash: string) => (hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : location.hash === hash);
 
 /* ── מבנה המחוז ── */
 
