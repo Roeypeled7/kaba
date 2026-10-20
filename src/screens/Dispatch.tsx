@@ -259,7 +259,7 @@ function PickHandler({ onPick }: { onPick: (p: LatLng) => void }) {
   return null;
 }
 
-function IncidentCard({ inc, state, send }: { inc: Incident; state: SimState; send: Send }) {
+export function IncidentCard({ inc, state, send }: { inc: Incident; state: SimState; send: Send }) {
   const [open, setOpen] = useState(false);
   const units = inc.vehicleIds.map((id) => state.vehicles.find((v) => v.id === id)!).filter((v) => v.incidentId === inc.id);
   const ambs = inc.ambulanceIds.map((id) => state.ambulances.find((a) => a.id === id)!).filter((a) => a.incidentId === inc.id);

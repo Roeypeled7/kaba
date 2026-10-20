@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import type { Command, SimState } from '../engine/model';
-import { STATION_ACCENT, SimControls, TopBar, mainStations, stationShort, subStations } from '../components/ui';
-
-const CORE = [
-  { hash: '#/dispatch', title: 'קבלה ושיגור', desc: 'שיחות נכנסות, פתיחת אירוע, הזנקה אוטומטית, ניהול אירועים ולוח כוחות' },
-  { hash: '#/comms', title: 'מערכת קשר', desc: 'ערוצי קשר, תעבורה לפי אירוע, שידור ליחידות, תיאום מד״א ומשטרה' },
-  { hash: '#/map', title: 'מפה', desc: 'מפת מצב חיה — תחנות, רכבים בתנועה, אירועים, אמבולנסים ובתי חולים' },
-];
+import type { ProfileId } from '../components/ui';
+import { PROFILES, PROFILE_IDS, STATION_ACCENT, SimControls, TopBar, mainStations, routeHref, stationShort, subStations } from '../components/ui';
 
 /** הטאבלט הוא עמוד נפרד (tablet/) — אותו מנוע, קישור משלו */
 const TABLET_URL = 'tablet/';
@@ -44,10 +39,27 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
     setPick(next);
     savePick(next);
   };
-  const openAll = () => {
-    const hashes = [...CORE.map((c) => c.hash), ...[...new Set(pick)].map((id) => `#/station/${id}`)];
-    hashes.forEach((h, i) => openWin(h, i));
-  };
+  /** מסך תחנה בתצוגה נפתח לפי שתי התחנות שנבחרו; שאר המסכים — אחד לכל מסך */
+  const screenHrefs = (pid: ProfileId) =>
+    PROFILES[pid].screens.flatMap((s) =>
+      s.path.startsWith('/station/') ? [...new Set(pick)].map((id) => routeHref(pid, `/station/${id}`)) : [routeHref(pid, s.path)],
+    );
+  const openProfile = (pid: ProfileId) => screenHrefs(pid).forEach((h, i) => openWin(h, i));
+  const stationPath = (path: string) => (path.startsWith('/station/') ? `/station/${pick[0]}` : path);
+  const pickers = (
+    <>
+      <span className="dim small">תחנות:</span>
+      {([0, 1] as const).map((i) => (
+        <select key={i} value={pick[i]} onChange={(e) => setOne(i, +e.target.value)}>
+          {mains.map((s) => (
+            <option key={s.id} value={s.id}>
+              {stationShort(s)}
+            </option>
+          ))}
+        </select>
+      ))}
+    </>
+  );
 
   return (
     <div className="screen launcher">
@@ -58,30 +70,53 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
         </p>
         {!shared && <div className="warn">הדפדפן הזה לא תומך ב-SharedWorker — כל חלון ירוץ בנפרד, בלי סנכרון. מומלץ Chrome / Edge / Safari 16+.</div>}
 
-        <div className="launch-grid">
-          {CORE.map((s, i) => (
-            <div key={s.hash} className="launch-card">
-              <div className="lc-num">{i + 1}</div>
-              <h2>{s.title}</h2>
-              <p>{s.desc}</p>
-              <div className="row gap">
-                <button className="btn primary" onClick={() => openWin(s.hash, i)}>
-                  פתח בחלון
-                </button>
-                <a className="btn ghost" href={s.hash}>
-                  כאן
-                </a>
+        {PROFILE_IDS.map((pid, pi) => {
+          const p = PROFILES[pid];
+          const hasStations = p.screens.some((s) => s.path.startsWith('/station/'));
+          return (
+            <section key={pid} className="profile" style={{ '--accent': p.accent } as React.CSSProperties}>
+              <div className="profile-head">
+                <div className="lc-num">{pi + 1}</div>
+                <div>
+                  <h2>{p.title}</h2>
+                  <p>{p.desc}</p>
+                </div>
+                <div className="profile-open">
+                  {hasStations && pickers}
+                  <button className="btn fire" onClick={() => openProfile(pid)}>
+                    פתח את כל המסכים ({screenHrefs(pid).length})
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+              <div className="launch-grid">
+                {p.screens.map((s, i) => {
+                  const href = routeHref(pid, stationPath(s.path));
+                  return (
+                    <div key={s.path} className="launch-card">
+                      <h2>{s.title}</h2>
+                      <p>{s.desc}</p>
+                      <div className="row gap">
+                        <button className="btn primary" onClick={() => openWin(href, i)}>
+                          פתח בחלון
+                        </button>
+                        <a className="btn ghost" href={href}>
+                          כאן
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
 
         <section className="station-launch">
-          <h2>עמדות תחנה</h2>
+          <h2>עמדות תחנה · {PROFILES.ops.title}</h2>
           <div className="station-launch-grid">
             {mains.map((st, i) => (
               <div key={st.id} className="sl-card" style={{ '--accent': STATION_ACCENT[st.id] } as React.CSSProperties}>
-                <button className="sl-open" onClick={() => openWin(`#/station/${st.id}`, CORE.length + i)} title="פתח בחלון">
+                <button className="sl-open" onClick={() => openWin(routeHref('ops', `/station/${st.id}`), i)} title="פתח בחלון">
                   <span className="sl-num mono">{st.id}</span>
                   <span className="sl-name">{stationShort(st)}</span>
                   <span className="sl-subs">
@@ -90,7 +125,7 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
                       .join(' · ') || 'ללא תחנות משנה'}
                   </span>
                 </button>
-                <a className="sl-here" href={`#/station/${st.id}`}>
+                <a className="sl-here" href={routeHref('ops', `/station/${st.id}`)}>
                   כאן
                 </a>
               </div>
@@ -115,23 +150,6 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
             </div>
           </div>
         </section>
-
-        <div className="open-all">
-          <button className="btn fire big" onClick={openAll}>
-            פתח את כל העמדות
-          </button>
-          <span className="dim small">שיגור, קשר, מפה ושתי תחנות:</span>
-          {([0, 1] as const).map((i) => (
-            <select key={i} value={pick[i]} onChange={(e) => setOne(i, +e.target.value)}>
-              {mains.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {stationShort(s)}
-                </option>
-              ))}
-            </select>
-          ))}
-          <span className="dim small">אם נפתח רק חלון אחד — אשר חלונות קופצים לאתר בשורת הכתובת.</span>
-        </div>
 
         <section className="panel">
           <h2>בקרת הדמיה</h2>

@@ -12,14 +12,67 @@ export function fmtElapsed(ms: number) {
   return m >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export const SCREENS = [
-  { hash: '#/dispatch', title: 'קבלה ושיגור', short: 'שיגור' },
-  { hash: '#/comms', title: 'מערכת קשר', short: 'קשר' },
-  { hash: '#/station/1', title: 'עמדות תחנה', short: 'תחנות' },
-  { hash: '#/map', title: 'מפה', short: 'מפה' },
+export interface ScreenDef {
+  path: string;
+  title: string;
+  short: string;
+  desc?: string;
+}
+
+/** המסכים בלי תצוגה (#/dispatch וכו׳) — נשארים לקישורים ישנים */
+export const SCREENS: ScreenDef[] = [
+  { path: '/dispatch', title: 'קבלה ושיגור', short: 'שיגור' },
+  { path: '/events', title: 'לוח אירועים', short: 'אירועים' },
+  { path: '/comms', title: 'מערכת קשר', short: 'קשר' },
+  { path: '/station/1', title: 'עמדות תחנה', short: 'תחנות' },
+  { path: '/map', title: 'מפה', short: 'מפה' },
 ];
 
-const navOn = (hash: string) => (hash.startsWith('#/station/') ? location.hash.startsWith('#/station/') : location.hash === hash);
+/* ── תצוגות: כל תצוגה היא סט מסכים לעמדה אחרת. נתיב: #/<תצוגה>/<מסך> ── */
+
+export type ProfileId = '102' | 'ops';
+
+export const PROFILES: Record<ProfileId, { title: string; short: string; accent: string; desc: string; screens: ScreenDef[] }> = {
+  '102': {
+    title: 'מרכז שליטה 102',
+    short: '102',
+    accent: '#ff6b35',
+    desc: 'מענה לשיחות 102 — קבלת שיחה, פתיחת אירוע והזנקה, ומעקב אחרי האירועים עד הסיום',
+    screens: [
+      { path: '/map', title: 'מפה', short: 'מפה', desc: 'מפת מצב חיה — תחנות, רכבים בתנועה, אירועים, אמבולנסים ובתי חולים' },
+      { path: '/dispatch', title: 'קבלה ושיגור', short: 'קבלה ושיגור', desc: 'שיחות נכנסות, פתיחת אירוע, המלצת כוחות והזנקה' },
+      { path: '/events', title: 'לוח אירועים', short: 'אירועים', desc: 'לשיגור · הוזנק · במקום · פנויים · יציאה — כל האירועים לפי שלב' },
+    ],
+  },
+  ops: {
+    title: 'מרכז שיגור וניהול אירועים',
+    short: 'שיגור וניהול',
+    accent: '#4cc9f0',
+    desc: 'ניהול הכוחות והאירועים שנפתחו — הזנקה, תחנות, תגבור וקשר מול היחידות',
+    screens: [
+      { path: '/map', title: 'מפה', short: 'מפה', desc: 'מפת מצב חיה — תחנות, רכבים בתנועה, אירועים, אמבולנסים ובתי חולים' },
+      { path: '/station/1', title: 'עמדות תחנה', short: 'תחנות', desc: 'קבלת הזנקה בתחנה, תור צוותים, סטטוס רכבים' },
+      { path: '/events', title: 'לוח אירועים', short: 'אירועים', desc: 'לשיגור · הוזנק · במקום · פנויים · יציאה — הזנקה ותגבור מהלוח' },
+      { path: '/comms', title: 'מערכת קשר', short: 'קשר', desc: 'ערוצי קשר, תעבורה לפי אירוע, שידור ליחידות, תיאום מד״א ומשטרה' },
+    ],
+  },
+};
+
+export const PROFILE_IDS = Object.keys(PROFILES) as ProfileId[];
+
+/** '#/102/events' → { profile: '102', path: '/events' }. תצוגה בלי מסך → המסך הראשון שלה */
+export function parseRoute(hash: string): { profile: ProfileId | null; path: string } {
+  const m = hash.match(/^#\/(102|ops)(\/.*)?$/);
+  if (!m) return { profile: null, path: hash.replace(/^#/, '') || '/' };
+  const profile = m[1] as ProfileId;
+  return { profile, path: !m[2] || m[2] === '/' ? PROFILES[profile].screens[0].path : m[2] };
+}
+export const routeHref = (profile: ProfileId | null, path: string) => (profile ? `#/${profile}${path}` : `#${path}`);
+/** קישור למסך בתוך התצוגה הנוכחית */
+export const hereHref = (path: string) => routeHref(parseRoute(location.hash).profile, path);
+
+const isStation = (path: string) => path.startsWith('/station/');
+const navOn = (path: string, current: string) => (isStation(path) ? isStation(current) : current === path);
 
 /* ── מבנה המחוז ── */
 
@@ -83,7 +136,7 @@ export function StationPicker({ state, current }: { state: SimState; current: nu
   return (
     <label className="station-picker">
       <span>תחנה</span>
-      <select value={current} onChange={(e) => (location.hash = `#/station/${e.target.value}`)}>
+      <select value={current} onChange={(e) => (location.hash = hereHref(`/station/${e.target.value}`))}>
         {mainStations(state.stations).map((s) => (
           <option key={s.id} value={s.id}>
             {s.id} · {stationShort(s)}
@@ -95,19 +148,21 @@ export function StationPicker({ state, current }: { state: SimState; current: nu
 }
 
 export function TopBar({ state, title, accent, children }: { state: SimState; title: string; accent?: string; children?: ReactNode }) {
+  const { profile, path } = parseRoute(location.hash);
+  const screens = profile ? PROFILES[profile].screens : SCREENS;
   return (
     <header className="topbar" style={accent ? ({ '--accent': accent } as React.CSSProperties) : undefined}>
       <div className="topbar-title">
         <span className="logo">🚒</span>
         <div>
           <div className="t1">{title}</div>
-          <div className="t2">{DISTRICT.name}</div>
+          <div className="t2">{profile ? `${PROFILES[profile].title} · ${DISTRICT.name}` : DISTRICT.name}</div>
         </div>
       </div>
       <nav className="topnav">
         <a href="#/">⌂</a>
-        {SCREENS.map((s) => (
-          <a key={s.hash} href={s.hash} className={navOn(s.hash) ? 'on' : ''}>
+        {screens.map((s) => (
+          <a key={s.path} href={routeHref(profile, s.path)} className={navOn(s.path, path) ? 'on' : ''}>
             {s.short}
           </a>
         ))}
