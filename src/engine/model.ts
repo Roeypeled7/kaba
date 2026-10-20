@@ -87,6 +87,23 @@ export interface Ambulance {
   statusSince: number;
 }
 
+/** מדיה שהגיעה למוקד מהזירה — נוצרת כאיור סינתטי לפי seed (אין תמונות אמיתיות בהדמיה) */
+export interface IncidentMedia {
+  kind: 'photo' | 'video';
+  seed: number;
+  /** שניות, לסרטון */
+  duration?: number;
+}
+
+/** עדכון שהמוקד קיבל ומעביר לכוחות: מהמדווח, מעוברי אורח, ממד״א, או מהמוקדן עצמו */
+export interface IncidentUpdate {
+  id: number;
+  t: number;
+  from: string;
+  text: string;
+  media?: IncidentMedia;
+}
+
 export type IncidentStatus = 'new' | 'dispatched' | 'active' | 'controlled' | 'closed';
 
 export interface Incident {
@@ -111,6 +128,7 @@ export interface Incident {
   /** דרישה שלא מולאה (חוסר כוחות) */
   shortage: Partial<Record<UnitType, number>>;
   log: { t: number; text: string }[];
+  updates: IncidentUpdate[];
 }
 
 export interface IncomingCall {
@@ -174,6 +192,8 @@ export interface SimState {
   radio: RadioMsg[];
   /** בקשות מד״א שממתינות לתשובה: incidentId → זמן תשובה */
   mdaPending: { incidentId: string; at: number }[];
+  /** עדכוני זירה שעוד יגיעו למוקד (מדווחים שולחים תמונות אחרי כמה דקות) */
+  pendingUpdates: { at: number; incidentId: string; from: string; text: string; media?: IncidentMedia }[];
   /** תגובות יחידות מתוזמנות (למשל לדיווח מצב) */
   pendingReplies: { at: number; channel: ChannelId; from: string; to?: string; text: string; incidentId?: string }[];
 }
@@ -197,6 +217,8 @@ export type Command =
   | { type: 'setSeverity'; incidentId: string; severity: 1 | 2 | 3 }
   | { type: 'releaseUnit'; vehicleId: string }
   | { type: 'closeIncident'; incidentId: string }
+  /** המוקדן מעביר עדכון לכוחות (טקסט, ואפשר לצרף תמונה/סרטון שהתקבלו) */
+  | { type: 'addUpdate'; incidentId: string; text: string; media?: IncidentMedia; from?: string }
   | { type: 'vehicleAction'; vehicleId: string; action: 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online' }
   | { type: 'ackDispatch'; dispatchId: string }
   | { type: 'setTurnTeam'; stationId: number; team: TeamId }

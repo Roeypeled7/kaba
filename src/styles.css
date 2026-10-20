@@ -435,3 +435,31 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .veh-mdt:hover { color: var(--text); border-color: var(--dim); }
 .tablet-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .tablet-card h2 { color: var(--text); font-size: 16px; text-transform: none; letter-spacing: 0; }
+
+/* ── עדכונים ומדיה מהזירה (משל״ט) ── */
+.inc-update { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.inc-update input { flex: 1; padding: 5px 8px; font-size: 13px; }
+.inc-updates { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.inc-upd { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; background: var(--panel); border-radius: 6px; padding: 6px 8px; }
+
+/* ── "תמונה/סרטון" סינתטיים מהזירה ── */
+.scene { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: #222; }
+.scene.thumb { width: 96px; flex: none; border-radius: 4px; }
+.scene.large { aspect-ratio: 16 / 9; border-radius: 10px; }
+.scene svg { display: block; width: 100%; height: 100%; }
+.scene-grain { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%); }
+.scene-play { position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; color: #fff; text-shadow: 0 2px 8px #000; }
+.scene-play::before { content: ''; position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); border: 2px solid #fff; }
+.scene-dur, .scene-stamp { position: absolute; bottom: 6px; font-size: 11px; font-style: normal; color: #fff; background: rgba(0, 0, 0, 0.6); padding: 1px 6px; border-radius: 3px; }
+.scene-dur { left: 6px; }
+.scene-stamp { right: 6px; }
+.scene.thumb .scene-stamp, .scene.thumb .scene-dur { display: none; }
+.scene.thumb .scene-play { font-size: 18px; }
+.scene.thumb .scene-play::before { width: 30px; height: 30px; }
+.scene-fire path { transform-box: fill-box; transform-origin: 50% 100%; }
+.scene.playing svg { animation: scene-zoom 14s ease-in-out infinite alternate; }
+.scene.playing .scene-smoke ellipse { animation: scene-drift 3.5s ease-in-out infinite alternate; }
+.scene.playing .scene-fire path { animation: scene-flicker 0.5s ease-in-out infinite alternate; }
+@keyframes scene-zoom { from { transform: scale(1); } to { transform: scale(1.12) translate(-2%, -1%); } }
+@keyframes scene-drift { from { transform: translate(0, 0); } to { transform: translate(8px, -14px); } }
+@keyframes scene-flicker { from { transform: scaleY(0.9); } to { transform: scaleY(1.15); } }

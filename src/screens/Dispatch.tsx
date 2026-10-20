@@ -23,6 +23,7 @@ import {
   teamUnit,
   turnUnit,
 } from '../components/ui';
+import { SceneMedia } from '../components/scene';
 import { playRing, useSoundLoop } from '../sound';
 
 type Send = (c: Command) => void;
@@ -261,6 +262,20 @@ function PickHandler({ onPick }: { onPick: (p: LatLng) => void }) {
 
 export function IncidentCard({ inc, state, send }: { inc: Incident; state: SimState; send: Send }) {
   const [open, setOpen] = useState(false);
+  const [note, setNote] = useState('');
+  // עדכון לכוחות בזירה — טקסט, או תמונה/סרטון "שהתקבלו מהמדווח" (איור סינתטי)
+  const sendUpdate = (kind?: 'photo' | 'video') => {
+    const text = note.trim() || (kind === 'video' ? 'סרטון שהתקבל מהמדווח' : kind ? 'תמונה שהתקבלה מהמדווח' : '');
+    if (!text) return;
+    send({
+      type: 'addUpdate',
+      incidentId: inc.id,
+      text,
+      from: kind ? 'המדווח' : 'מוקד',
+      media: kind ? { kind, seed: Date.now() % 100_000, ...(kind === 'video' ? { duration: 10 + (Date.now() % 15) } : {}) } : undefined,
+    });
+    setNote('');
+  };
   const units = inc.vehicleIds.map((id) => state.vehicles.find((v) => v.id === id)!).filter((v) => v.incidentId === inc.id);
   const ambs = inc.ambulanceIds.map((id) => state.ambulances.find((a) => a.id === id)!).filter((a) => a.incidentId === inc.id);
   const type = INCIDENT_TYPE[inc.typeKey];
@@ -336,20 +351,49 @@ export function IncidentCard({ inc, state, send }: { inc: Incident; state: SimSt
           🚓 {inc.policeNotified ? 'משטרה עודכנה' : 'עדכן משטרה'}
         </button>
         <button className="btn xs ghost" onClick={() => setOpen(!open)}>
-          {open ? 'הסתר יומן' : `יומן (${inc.log.length})`}
+          {open ? 'הסתר יומן' : `יומן (${inc.log.length})${inc.updates.length ? ` · עדכונים (${inc.updates.length})` : ''}`}
         </button>
         <button className="btn xs danger push" onClick={() => send({ type: 'closeIncident', incidentId: inc.id })}>
           סגור אירוע
         </button>
       </div>
+      {inc.status !== 'closed' && (
+        <div className="inc-update">
+          <input placeholder="עדכון לכוחות בזירה…" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendUpdate()} />
+          <button className="btn xs" title="צרף תמונה שהתקבלה מהמדווח" onClick={() => sendUpdate('photo')}>
+            📷
+          </button>
+          <button className="btn xs" title="צרף סרטון שהתקבל מהמדווח" onClick={() => sendUpdate('video')}>
+            🎥
+          </button>
+          <button className="btn xs primary" disabled={!note.trim()} onClick={() => sendUpdate()}>
+            שלח
+          </button>
+        </div>
+      )}
       {open && (
-        <ol className="inc-log">
-          {inc.log.map((l, i) => (
-            <li key={i}>
-              <span className="mono dim">{fmtHM(l.t)}</span> {l.text}
-            </li>
-          ))}
-        </ol>
+        <>
+          {inc.updates.length > 0 && (
+            <div className="inc-updates">
+              {[...inc.updates].reverse().map((u) => (
+                <div key={u.id} className="inc-upd">
+                  {u.media && <SceneMedia typeKey={inc.typeKey} media={u.media} t={u.t} className="thumb" />}
+                  <div>
+                    <b>{u.from}</b> <span className="mono dim">{fmtHM(u.t)}</span>
+                    <div>{u.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <ol className="inc-log">
+            {inc.log.map((l, i) => (
+              <li key={i}>
+                <span className="mono dim">{fmtHM(l.t)}</span> {l.text}
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </div>
   );

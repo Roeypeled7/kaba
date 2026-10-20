@@ -4,8 +4,9 @@ import { MapContainer, Marker, Polyline, useMap } from 'react-leaflet';
 import { AMB_STATUS_LABEL, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
 import { distKm } from '../../engine/dispatch';
 import { etaMin } from '../../engine/simulation';
-import type { Incident, LatLng, Vehicle } from '../../engine/model';
+import type { Incident, IncidentUpdate, LatLng, Vehicle } from '../../engine/model';
 import { DarkTiles, incidentIcon, stationIcon, vehicleIcon } from '../../components/mapkit';
+import { SceneMedia } from '../../components/scene';
 import { VEHICLE_ACTIONS, fmtElapsed, fmtHM, stationShort } from '../../components/ui';
 import { fmtDate, unitFeed, type Ctx } from './shared';
 
@@ -44,6 +45,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
   const { state, send, v, st } = ctx;
   const act = VEHICLE_ACTIONS[v.status];
   const stepIdx = STEPS.findIndex(([s]) => s === v.status);
+  const [view, setView] = useState<IncidentUpdate | null>(null);
 
   if (!inc) {
     return (
@@ -72,106 +74,171 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
   const others = state.vehicles.filter((x) => x.incidentId === inc.id && x.id !== v.id);
   const ambs = state.ambulances.filter((a) => inc.ambulanceIds.includes(a.id) && a.incidentId === inc.id);
   const km = distKm(v.pos, inc.pos);
+  const driving = v.status === 'enroute' || v.status === 'dispatched';
+  const eta = etaMin(v.pos, inc.pos, UNIT_SPEED_KMH[v.type]);
+  const updates = [...inc.updates].reverse();
 
   return (
-    <div className="mdt-split">
-      <section className="mdt-panel grow">
-        <div className="mdt-inc-head">
-          <span className="mdt-inc-type">
-            {t.icon} {t.label}
-          </span>
-          <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
-          <span className="grow" />
-          <span className="mono dim">#{inc.id}</span>
-          <span className="mono">{fmtElapsed(state.simTime - inc.openedAt)}</span>
-        </div>
-        <div className="mdt-inc-addr">📍 {inc.address}</div>
-        {inc.notes && <div className="mdt-inc-notes">“{inc.notes}”</div>}
-        <div className="mdt-inc-caller">
-          מדווח: {inc.caller} · <span className="mono">{inc.phone}</span> · {INCIDENT_STATUS_LABEL[inc.status]}
-        </div>
+    <div className="mdt-nav-split">
+      {/* ימין: פרטי האירוע ועדכונים */}
+      <section className="mdt-panel mdt-details">
+        <div className="mdt-scroll mdt-details-scroll">
+          <div className="mdt-inc-head">
+            <span className="mdt-inc-type">
+              {t.icon} {t.label}
+            </span>
+            <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
+            <span className="grow" />
+            <span className="mono dim">#{inc.id}</span>
+            <span className="mono">{fmtElapsed(state.simTime - inc.openedAt)}</span>
+          </div>
+          <div className="mdt-inc-addr">📍 {inc.address}</div>
+          {inc.notes && <div className="mdt-inc-notes">“{inc.notes}”</div>}
+          <div className="mdt-inc-caller">
+            מדווח: {inc.caller} · <span className="mono">{inc.phone}</span> · {INCIDENT_STATUS_LABEL[inc.status]}
+          </div>
 
-        <ol className="mdt-steps">
-          {STEPS.map(([s, label], i) => (
-            <li key={s} className={i < stepIdx ? 'done' : i === stepIdx ? 'now' : ''}>
-              <i>{i < stepIdx ? '✓' : i + 1}</i>
-              {label}
-            </li>
-          ))}
-        </ol>
+          <ol className="mdt-steps">
+            {STEPS.map(([s, label], i) => (
+              <li key={s} className={i < stepIdx ? 'done' : i === stepIdx ? 'now' : ''}>
+                <i>{i < stepIdx ? '✓' : i + 1}</i>
+                {label}
+              </li>
+            ))}
+          </ol>
 
-        <div className="mdt-act-row">
-          {act && (
-            <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
-              {act.label}
-            </button>
-          )}
-          <div className="mdt-eta">
-            <b className="mono">{km.toFixed(1)}</b> ק״מ
-            {(v.status === 'enroute' || v.status === 'dispatched') && (
-              <>
-                {' · '}
-                <b className="mono">{etaMin(v.pos, inc.pos, UNIT_SPEED_KMH[v.type])}</b> דק׳ הגעה
-              </>
+          <div className="mdt-act-row">
+            {act && (
+              <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
+                {act.label}
+              </button>
             )}
           </div>
-        </div>
-
-        <div className="mdt-quick">
-          {QUICK.map((q) => (
-            <button key={q} className="mdt-btn sm" onClick={() => send({ type: 'unitRadio', vehicleId: v.id, text: q })}>
-              📻 {q}
-            </button>
-          ))}
-        </div>
-
-        <div className="mdt-panel-h small">יומן אירוע</div>
-        <div className="mdt-scroll mdt-log">
-          {[...inc.log].reverse().map((l, i) => (
-            <div key={i}>
-              <span className="mono dim">{fmtHM(l.t)}</span> {l.text}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mdt-panel side">
-        <div className="mdt-map">
-          <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={13} zoomControl={false} attributionControl={false}>
-            <DarkTiles />
-            <FitBoth a={v.pos} b={inc.pos} id={inc.id} />
-            <Marker position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} />
-            <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#ffb020', weight: 4, dashArray: '8 8' }} />
-            <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
-            {others.map((x) => (
-              <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
+          <div className="mdt-quick">
+            {QUICK.map((q) => (
+              <button key={q} className="mdt-btn sm" onClick={() => send({ type: 'unitRadio', vehicleId: v.id, text: q })}>
+                📻 {q}
+              </button>
             ))}
-            <Marker position={[v.pos.lat, v.pos.lng]} icon={vehicleIcon(v)} zIndexOffset={500} />
-          </MapContainer>
-        </div>
-        <div className="mdt-panel-h small">כוחות באירוע</div>
-        <div className="mdt-scroll mdt-forces">
-          {others.map((x) => (
-            <div key={x.id}>
-              <b>{x.callsign}</b>
-              <span className={`mdt-stdot st-${x.status}`}>{STATUS_LABEL[x.status]}</span>
-            </div>
-          ))}
-          {ambs.map((a) => (
-            <div key={a.id}>
-              <b>✚ {a.callsign}</b>
-              <span className="mdt-stdot amb">{AMB_STATUS_LABEL[a.status]}</span>
-            </div>
-          ))}
-          {inc.policeNotified && (
-            <div>
-              <b>🚓 משטרה</b>
-              <span className="dim">עודכנה</span>
-            </div>
-          )}
-          {!others.length && !ambs.length && !inc.policeNotified && <div className="mdt-empty">רק הרכב שלכם באירוע</div>}
+          </div>
+
+          <div className="mdt-panel-h small">
+            עדכונים מהזירה <span className="mdt-count">{inc.updates.length}</span>
+          </div>
+          <div className="mdt-updates">
+            {!updates.length && <div className="mdt-empty">עוד לא התקבלו עדכונים מהמוקד</div>}
+            {updates.map((u) => (
+              <div key={u.id} className={`mdt-update ${u.media ? 'has-media' : ''}`}>
+                <div className="mdt-update-head">
+                  <b>{u.from}</b>
+                  <span className="mono dim">{fmtHM(u.t)}</span>
+                  {u.media && <span className="mdt-update-kind">{u.media.kind === 'video' ? '🎥 סרטון' : '📷 תמונה'}</span>}
+                </div>
+                <div>{u.text}</div>
+                {u.media && (
+                  <button className="mdt-media-btn" onClick={() => setView(u)} aria-label="פתח במסך מלא">
+                    <SceneMedia typeKey={inc.typeKey} media={u.media} t={u.t} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mdt-panel-h small">כוחות באירוע</div>
+          <div className="mdt-forces">
+            {others.map((x) => (
+              <div key={x.id}>
+                <b>{x.callsign}</b>
+                <span className={`mdt-stdot st-${x.status}`}>{STATUS_LABEL[x.status]}</span>
+              </div>
+            ))}
+            {ambs.map((a) => (
+              <div key={a.id}>
+                <b>✚ {a.callsign}</b>
+                <span className="mdt-stdot amb">{AMB_STATUS_LABEL[a.status]}</span>
+              </div>
+            ))}
+            {inc.policeNotified && (
+              <div>
+                <b>🚓 משטרה</b>
+                <span className="dim">עודכנה</span>
+              </div>
+            )}
+            {!others.length && !ambs.length && !inc.policeNotified && <div className="mdt-empty">רק הרכב שלכם באירוע</div>}
+          </div>
+
+          <div className="mdt-panel-h small">יומן אירוע</div>
+          <div className="mdt-log">
+            {[...inc.log].reverse().map((l, i) => (
+              <div key={i}>
+                <span className="mono dim">{fmtHM(l.t)}</span> {l.text}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
+
+      {/* שמאל: ניווט */}
+      <section className="mdt-nav">
+        <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={13} zoomControl={false} attributionControl={false}>
+          <DarkTiles />
+          <FitBoth a={v.pos} b={inc.pos} id={inc.id} />
+          <Marker position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} />
+          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#10151b', weight: 11, opacity: 0.85 }} />
+          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#ffb020', weight: 6 }} />
+          <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
+          {others.map((x) => (
+            <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
+          ))}
+          <Marker position={[v.pos.lat, v.pos.lng]} icon={vehicleIcon(v)} zIndexOffset={500} />
+        </MapContainer>
+        <div className="mdt-nav-top">
+          <span className="mdt-nav-arrow">{driving ? '⬆' : '📍'}</span>
+          <div>
+            <div className="mdt-nav-dest">{inc.address}</div>
+            <div className="mdt-nav-sub">
+              {t.icon} {t.label} · {driving ? 'בדרך לזירה' : v.status === 'onscene' ? 'בזירה' : STATUS_LABEL[v.status]}
+            </div>
+          </div>
+        </div>
+        <div className="mdt-nav-bottom">
+          <div className="mdt-nav-eta">
+            <b className="mono">{driving ? eta : v.status === 'onscene' || v.status === 'cleared' ? '✓' : '—'}</b>
+            <span>{driving ? 'דק׳' : v.status === 'onscene' || v.status === 'cleared' ? 'הגעתם' : ''}</span>
+          </div>
+          <div className="mdt-nav-stats">
+            <div>
+              <b className="mono">{km.toFixed(1)}</b> ק״מ
+            </div>
+            {driving && (
+              <div>
+                הגעה <b className="mono">{fmtHM(state.simTime + eta * 60_000)}</b>
+              </div>
+            )}
+            <div className="dim">{others.length ? `${others.length} כוחות נוספים בדרך` : 'רק הרכב שלכם'}</div>
+          </div>
+        </div>
+      </section>
+
+      {view?.media && (
+        <div className="mdt-lightbox" onClick={() => setView(null)}>
+          <div className="mdt-lightbox-in" onClick={(e) => e.stopPropagation()}>
+            <SceneMedia typeKey={inc.typeKey} media={view.media} t={view.t} playing={view.media.kind === 'video'} className="large" />
+            {view.media.kind === 'video' && (
+              <div className="mdt-vid-bar">
+                <i style={{ animationDuration: `${view.media.duration ?? 12}s` }} />
+              </div>
+            )}
+            <div className="mdt-lightbox-cap">
+              <b>{view.from}</b> · <span className="mono">{fmtHM(view.t)}</span>
+              <div>{view.text}</div>
+            </div>
+            <button className="mdt-btn white" onClick={() => setView(null)}>
+              סגירה
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -180,7 +247,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
 function FitBoth({ a, b, id }: { a: LatLng; b: LatLng; id: string }) {
   const map = useMap();
   useEffect(() => {
-    map.fitBounds(L.latLngBounds([a.lat, a.lng], [b.lat, b.lng]), { padding: [40, 40], maxZoom: 15, animate: false });
+    map.fitBounds(L.latLngBounds([a.lat, a.lng], [b.lat, b.lng]), { padding: [90, 90], maxZoom: 15, animate: false });
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
@@ -217,6 +284,7 @@ function History({ ctx, list }: { ctx: Ctx; list: Incident[] }) {
                   {t.icon} {t.label}
                 </b>
                 <span className="grow">{inc.address}</span>
+                {inc.updates.some((u) => u.media) && <span className="dim small">📷 {inc.updates.filter((u) => u.media).length}</span>}
                 <span className="mono">{fmtElapsed(dur)}</span>
                 <span className={`mdt-inc-st i-${inc.status}`}>{INCIDENT_STATUS_LABEL[inc.status]}</span>
               </div>

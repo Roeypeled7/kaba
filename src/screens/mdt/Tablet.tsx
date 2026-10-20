@@ -2,7 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
-import { audioReady, playAlarm, unlockAudio, useSoundLoop } from '../../sound';
+import { audioReady, playSiren, unlockAudio, useSoundLoop } from '../../sound';
 import { IcBack, IcBarrier, IcBattery, IcFlame, IcGauge, IcHazard, IcHelmet, IcHome, IcHydrant, IcMenu, IcWalkie, IcWrenchCheck, Watermark } from './icons';
 import { useLocal, type Ctx, type Send } from './shared';
 import Events from './Events';
@@ -69,7 +69,8 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
 
   // הזנקה שממתינה לאישור ושכוללת את הרכב הזה
   const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
-  useSoundLoop(!!alarm, playAlarm, 4500);
+  // סירנת כבאית כל עוד ההזנקה לא אושרה
+  useSoundLoop(!!alarm, () => playSiren(2, 1.6), 3400);
 
   const ctx: Ctx | null = v && st ? { state, send, v, st, segs, go } : null;
 

@@ -1,7 +1,7 @@
 import { AMBULANCE_SPEED_KMH, DEFAULT_SPEED, DISTRICT, INCIDENT_TYPE, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
 import { applyRotation, assignTeams, distKm, mainStationId, nearestHospital, needDelta, recommend, requirement, type Need } from './dispatch';
 import { etaMin, makeCall, moveToward, nextCallDelayMs } from './simulation';
-import type { Ambulance, Assignment, ChannelId, Command, Incident, SimState, Station, Vehicle } from './model';
+import type { Ambulance, Assignment, ChannelId, Command, Incident, IncidentMedia, SimState, Station, Vehicle } from './model';
 
 const MAX_RADIO = 400;
 const MAX_CALLS = 6;
@@ -27,9 +27,42 @@ export function initialState(now: number): SimState {
       { id: 0, t: now, channel: 'district', from: 'מוקד', to: 'כל התחנות', text: `המערכת עלתה. ${DISTRICT.name} — כל הכוחות כשירים.`, outgoing: true },
     ],
     mdaPending: [],
+    pendingUpdates: [],
     pendingReplies: [],
   };
 }
+
+/** עדכונים שמדווחים שולחים למוקד אחרי פתיחת האירוע — לפי סוג האירוע */
+const SCENE_UPDATES: Record<string, { after: [number, number]; from: string; text: string; media?: 'photo' | 'video' }[]> = {
+  structure: [
+    { after: [15, 30], from: 'המדווח', text: 'תמונה מהחזית — עשן שחור מחלונות הקומה השלישית', media: 'photo' },
+    { after: [50, 90], from: 'עובר אורח', text: 'סרטון מהכביש: להבות נראות מהחלון השמאלי', media: 'video' },
+    { after: [120, 170], from: 'ועד הבית', text: 'כל הדיירים יצאו, חוץ מדירה 9 — קשישה שלא עונה לדלת' },
+  ],
+  vehicle: [
+    { after: [15, 30], from: 'המדווח', text: 'תמונה מהחניה — האש בתא המנוע', media: 'photo' },
+    { after: [45, 80], from: 'עובר אורח', text: 'סרטון: האש מתפשטת לרכב הסמוך', media: 'video' },
+  ],
+  brush: [
+    { after: [15, 30], from: 'המדווח', text: 'תמונה מהשביל — חזית האש מתקדמת עם הרוח מזרחה', media: 'photo' },
+    { after: [60, 100], from: 'תושב', text: 'סרטון מהגג: העשן מגיע לבתים הראשונים', media: 'video' },
+    { after: [130, 180], from: 'מוקד', text: 'רוח מערבית 25 קמ״ש, מתחזקת' },
+  ],
+  mva: [
+    { after: [15, 30], from: 'המדווח', text: 'תמונה מהזירה — רכב הפוך על הגג, נהג בפנים', media: 'photo' },
+    { after: [40, 70], from: 'נהג חולף', text: 'סרטון: דליפת דלק מתחת לרכב', media: 'video' },
+    { after: [90, 130], from: 'מד״א', text: 'הלכוד בהכרה, לחוץ ברגליים. נדרש חילוץ מהיר' },
+  ],
+  hazmat: [
+    { after: [20, 40], from: 'אחראי משמרת במפעל', text: 'תמונת שלט המכל — UN 1017 כלור', media: 'photo' },
+    { after: [60, 100], from: 'עובד', text: 'סרטון: ענן לבן-ירקרק נע לכיוון הכביש', media: 'video' },
+    { after: [120, 160], from: 'מוקד', text: '3 עובדים עם קשיי נשימה פונו למרפאת המפעל' },
+  ],
+  rescue: [
+    { after: [15, 30], from: 'המדווח', text: 'תמונה — העובד תקוע על הפיגום בקומה 5', media: 'photo' },
+    { after: [60, 100], from: 'מנהל העבודה', text: 'סרטון: הפיגום לא יציב, זז ברוח', media: 'video' },
+  ],
+};
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
@@ -84,6 +117,12 @@ export class Engine {
   }
   private log(inc: Incident, text: string) {
     inc.log.push({ t: this.now, text });
+  }
+  /** עדכון זירה — נרשם באירוע ומשודר לכוחות בערוץ המחוזי */
+  private addUpdate(inc: Incident, from: string, text: string, media?: IncidentMedia) {
+    inc.updates.push({ id: this.nextId(), t: this.now, from, text, media });
+    const tag = media ? (media.kind === 'video' ? ' 🎥' : ' 📷') : '';
+    this.radio('district', 'מוקד', `כוחות אירוע ${inc.id}`, `עדכון מ${from}:${tag} ${text}`, inc.id, true);
   }
   private setStatus(v: Vehicle, status: Vehicle['status']): void;
   private setStatus(v: Ambulance, status: Ambulance['status']): void;
@@ -264,8 +303,17 @@ export class Engine {
           policeNotified: false,
           shortage: {},
           log: [],
+          updates: [],
         };
         s.incidents.push(inc);
+        for (const u of SCENE_UPDATES[cmd.typeKey] ?? [])
+          s.pendingUpdates.push({
+            at: this.now + rand(u.after[0], u.after[1]) * 1000,
+            incidentId: inc.id,
+            from: u.from,
+            text: u.text,
+            media: u.media ? { kind: u.media, seed: this.nextId(), ...(u.media === 'video' ? { duration: Math.round(rand(8, 24)) } : {}) } : undefined,
+          });
         if (cmd.callId) s.calls = s.calls.filter((c) => c.id !== cmd.callId);
         this.log(inc, `נפתח אירוע: ${type.label}, חומרה ${cmd.severity}`);
         if (s.autoDispatch) this.autoDispatch(inc, requirement(inc.typeKey, inc.severity));
@@ -312,6 +360,12 @@ export class Engine {
           this.radio(this.channelOf(v), 'מוקד', v.callsign, 'משוחררים מהאירוע', v.incidentId, true);
           this.startReturn(v, 'קיבלתי, חוזרים לתחנה');
         }
+        break;
+      }
+      case 'addUpdate': {
+        const inc = this.incident(cmd.incidentId);
+        if (!inc || inc.status === 'closed') break;
+        this.addUpdate(inc, cmd.from ?? 'מוקד', cmd.text, cmd.media);
         break;
       }
       case 'closeIncident': {
@@ -442,6 +496,15 @@ export class Engine {
     if (s.pendingReplies.some((p) => p.at <= now)) {
       for (const p of s.pendingReplies.filter((p) => p.at <= now)) this.radio(p.channel, p.from, p.to ?? 'מוקד', p.text, p.incidentId, p.from === 'מוקד');
       s.pendingReplies = s.pendingReplies.filter((p) => p.at > now);
+    }
+
+    // עדכונים מהזירה שהגיע זמנם
+    if (s.pendingUpdates.some((p) => p.at <= now)) {
+      for (const p of s.pendingUpdates.filter((p) => p.at <= now)) {
+        const inc = this.incident(p.incidentId);
+        if (inc && inc.status !== 'closed') this.addUpdate(inc, p.from, p.text, p.media);
+      }
+      s.pendingUpdates = s.pendingUpdates.filter((p) => p.at > now);
     }
 
     // מד״א משבץ אמבולנס
