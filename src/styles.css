@@ -149,7 +149,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; overflow-y: auto; min-height: 0; }
 
 /* ── dispatch ── */
-.dispatch-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 420px 1fr 380px; gap: 10px; padding: 10px; }
+.dispatch-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 30%; gap: 10px; padding: 10px; }
+.calls-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
+.calls-list .call { margin-bottom: 0; }
+.dispatch-map { position: relative; min-height: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.dispatch-map .leaflet-container { height: 100%; cursor: crosshair; }
+.map-hint {
+  position: absolute; bottom: 10px; inset-inline: 10px; z-index: 500; pointer-events: none; text-align: center;
+  background: color-mix(in srgb, var(--bg) 85%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 600;
+}
 .call { border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 8px; background: var(--panel-2); }
 .call.ringing { border-color: #ffd166; animation: pulse 1.2s infinite; }
 .call.taken { border-color: #1f6feb; }
@@ -162,8 +170,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .type-btn { background: var(--bg); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 8px 4px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .type-btn span { font-size: 20px; }
 .type-btn.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--bg)); }
-.pick-map { height: 170px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
-.pick-map .leaflet-container { height: 100%; cursor: crosshair; }
 .preview { background: var(--bg); border: 1px dashed var(--line); border-radius: 6px; padding: 8px; }
 .inc-card { border: 1px solid var(--line); border-inline-start: 4px solid var(--st-enroute); border-radius: 6px; padding: 12px; margin-bottom: 10px; background: var(--panel-2); }
 .inc-card.inc-new { border-inline-start-color: var(--st-dispatched); }
@@ -428,6 +434,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .panel { overflow: visible; }
   .radio-log .log { max-height: 60vh; }
   .map-wrap { height: 80vh; flex: none; }
+  .dispatch-map { height: 60vh; }
   .map-incidents { width: 220px; max-height: 50%; }
   .alarm-word { font-size: 36px; }
 }

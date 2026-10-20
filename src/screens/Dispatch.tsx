@@ -3,26 +3,9 @@ import { CircleMarker, MapContainer, Marker, useMapEvents } from 'react-leaflet'
 import { ADDRESSES, AMB_STATUS_LABEL, DISTRICT, INCIDENT_TYPE, INCIDENT_TYPES, UNIT_LABEL, UNIT_SPEED_KMH } from '../engine/config';
 import { recommend, requirement } from '../engine/dispatch';
 import { etaMin } from '../engine/simulation';
-import type { Assignment, Command, Incident, IncomingCall, LatLng, SimState, Station, UnitType, Vehicle } from '../engine/model';
-import { DarkTiles, FitDistrict, FlyTo, pinIcon } from '../components/mapkit';
-import {
-  AmbChip,
-  IncidentBadge,
-  IncidentTitle,
-  SimControls,
-  StatusChip,
-  TopBar,
-  UnitTag,
-  byUnit,
-  crewLabel,
-  fmtElapsed,
-  fmtHM,
-  mainStations,
-  stationShort,
-  subStations,
-  teamUnit,
-  turnUnit,
-} from '../components/ui';
+import type { Assignment, Command, Incident, IncomingCall, LatLng, SimState, UnitType, Vehicle } from '../engine/model';
+import { DarkTiles, FitDistrict, FlyTo, incidentIcon, pinIcon, vehicleIcon } from '../components/mapkit';
+import { IncidentBadge, IncidentTitle, SimControls, TopBar, UnitTag, fmtElapsed, fmtHM, teamUnit } from '../components/ui';
 import { SceneMedia } from '../components/scene';
 import { playRing, useSoundLoop } from '../sound';
 
@@ -73,27 +56,29 @@ export default function Dispatch({ state, send }: { state: SimState; send: Send 
             שיחות נכנסות <span className="count">{state.calls.length}</span>
           </h2>
           {!state.calls.length && <div className="empty">אין שיחות ממתינות</div>}
-          {state.calls.map((c) => (
-            <div key={c.id} className={`call ${draft.callId === c.id ? 'taken' : 'ringing'}`}>
-              <div className="call-head">
-                <span className="ring-ico">☎</span>
-                <b>{c.caller}</b>
-                <span className="mono dim">{c.phone}</span>
-                <span className="mono dim push">{fmtElapsed(state.simTime - c.t)}</span>
+          <div className="calls-list">
+            {state.calls.map((c) => (
+              <div key={c.id} className={`call ${draft.callId === c.id ? 'taken' : 'ringing'}`}>
+                <div className="call-head">
+                  <span className="ring-ico">☎</span>
+                  <b>{c.caller}</b>
+                  <span className="mono dim">{c.phone}</span>
+                  <span className="mono dim push">{fmtElapsed(state.simTime - c.t)}</span>
+                </div>
+                <div className="call-body">
+                  {INCIDENT_TYPE[c.typeKey].icon} “{c.description}” — {ADDRESSES[c.addressIdx].name}
+                </div>
+                <div className="row gap">
+                  <button className="btn primary sm" onClick={() => accept(c)}>
+                    קבל שיחה
+                  </button>
+                  <button className="btn ghost sm" onClick={() => send({ type: 'dropCall', callId: c.id })}>
+                    שיחת סרק
+                  </button>
+                </div>
               </div>
-              <div className="call-body">
-                {INCIDENT_TYPE[c.typeKey].icon} “{c.description}” — {ADDRESSES[c.addressIdx].name}
-              </div>
-              <div className="row gap">
-                <button className="btn primary sm" onClick={() => accept(c)}>
-                  קבל שיחה
-                </button>
-                <button className="btn ghost sm" onClick={() => send({ type: 'dropCall', callId: c.id })}>
-                  שיחת סרק
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
           <IncidentForm state={state} send={send} draft={draft} setDraft={setDraft} />
         </section>
 
@@ -120,9 +105,38 @@ export default function Dispatch({ state, send }: { state: SimState; send: Send 
           )}
         </section>
 
-        <section className="panel units-panel">
-          <h2>לוח כוחות</h2>
-          <UnitBoard state={state} />
+        <section className="dispatch-map">
+          <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={DISTRICT.zoom} zoomSnap={0.25} attributionControl={false}>
+            <DarkTiles />
+            <FitDistrict points={state.stations.map((s) => s.pos)} />
+            {state.stations.map((s) =>
+              s.parentId === null ? (
+                <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={5} pathOptions={{ color: '#ff6b35', fillOpacity: 0.9, weight: 2 }} />
+              ) : (
+                <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={2.5} pathOptions={{ color: '#c9805f', fillOpacity: 0.7, weight: 1 }} />
+              ),
+            )}
+            {active.map((inc) => (
+              <Marker key={inc.id} position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc)} />
+            ))}
+            {state.vehicles
+              .filter((v) => v.status !== 'available' && v.status !== 'offline')
+              .map((v) => (
+                <Marker key={v.id} position={[v.pos.lat, v.pos.lng]} icon={vehicleIcon(v)} zIndexOffset={100} />
+              ))}
+            {draft.pos && <Marker position={[draft.pos.lat, draft.pos.lng]} icon={pinIcon()} zIndexOffset={1000} />}
+            <FlyTo pos={draft.pos} zoom={13} />
+            <PickHandler
+              onPick={(pos) =>
+                setDraft({
+                  ...draft,
+                  pos,
+                  address: draft.address && !draft.address.startsWith('נקודה במפה') ? draft.address : `נקודה במפה (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`,
+                })
+              }
+            />
+          </MapContainer>
+          <div className="map-hint">{draft.pos ? `📍 ${draft.address}` : 'לחץ על המפה לסימון מיקום האירוע'}</div>
         </section>
       </div>
     </div>
@@ -189,26 +203,6 @@ function IncidentForm({ state, send, draft, setDraft }: { state: SimState; send:
         ))}
       </select>
       <input placeholder="כתובת" value={draft.address} onChange={(e) => set({ address: e.target.value })} />
-      <div className="pick-map">
-        <MapContainer center={[DISTRICT.center.lat, DISTRICT.center.lng]} zoom={DISTRICT.zoom} zoomSnap={0.25} zoomControl={false} attributionControl={false}>
-          <DarkTiles />
-          <FitDistrict points={state.stations.map((s) => s.pos)} />
-          {state.stations.map((s) =>
-            s.parentId === null ? (
-              <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={5} pathOptions={{ color: '#ff6b35', fillOpacity: 0.9, weight: 2 }} />
-            ) : (
-              <CircleMarker key={s.id} center={[s.pos.lat, s.pos.lng]} radius={2.5} pathOptions={{ color: '#c9805f', fillOpacity: 0.7, weight: 1 }} />
-            ),
-          )}
-          {draft.pos && <Marker position={[draft.pos.lat, draft.pos.lng]} icon={pinIcon()} />}
-          <FlyTo pos={draft.pos} zoom={12} />
-          <PickHandler
-            onPick={(pos) =>
-              set({ pos, address: draft.address && !draft.address.startsWith('נקודה במפה') ? draft.address : `נקודה במפה (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})` })
-            }
-          />
-        </MapContainer>
-      </div>
       <div className="row gap">
         <input placeholder="שם המתקשר" value={draft.caller} onChange={(e) => set({ caller: e.target.value })} />
         <input placeholder="טלפון" value={draft.phone} onChange={(e) => set({ phone: e.target.value })} className="mono" />
@@ -434,71 +428,6 @@ function ManualDispatch({ inc, state, send }: { inc: Incident; state: SimState; 
       <button className="btn fire" disabled={!ids.length} onClick={() => send({ type: 'dispatchUnits', incidentId: inc.id, vehicleIds: ids })}>
         🚨 הזנק ({ids.length})
       </button>
-    </div>
-  );
-}
-
-function UnitRow({ v, state }: { v: Vehicle; state: SimState }) {
-  return (
-    <div className="ub-row">
-      <span className="callsign">{v.callsign}</span>
-      <span className="dim small ub-crew">{crewLabel(v)}</span>
-      <span className="push" />
-      {v.incidentId && <span className="mono dim small">#{v.incidentId}</span>}
-      <StatusChip v={v} />
-    </div>
-  );
-}
-
-function SubBlock({ st, state }: { st: Station; state: SimState }) {
-  const vs = state.vehicles.filter((v) => v.stationId === st.id).sort(byUnit);
-  return (
-    <div className="ub-sub">
-      <div className="ub-sub-name">↳ {stationShort(st)}</div>
-      {vs.map((v) => (
-        <UnitRow key={v.id} v={v} state={state} />
-      ))}
-    </div>
-  );
-}
-
-function UnitBoard({ state }: { state: SimState }) {
-  return (
-    <div className="unit-board">
-      {mainStations(state.stations).map((st) => (
-        <div key={st.id} className="ub-station">
-          <div className="ub-head">
-            <b>{st.name}</b>
-            <span className="turn">
-              בתור: <b className="mono">{turnUnit(st)}</b>
-            </span>
-          </div>
-          {state.vehicles
-            .filter((v) => v.stationId === st.id)
-            .sort(byUnit)
-            .map((v) => (
-              <UnitRow key={v.id} v={v} state={state} />
-            ))}
-          {subStations(state.stations, st.id).map((sub) => (
-            <SubBlock key={sub.id} st={sub} state={state} />
-          ))}
-        </div>
-      ))}
-      <div className="ub-station">
-        <div className="ub-head">
-          <b>מד״א</b>
-          <span className="dim small">לא בשליטת המוקד</span>
-        </div>
-        {state.ambulances.map((a) => (
-          <div key={a.id} className="ub-row">
-            <span className="callsign">{a.callsign}</span>
-            <span className="dim small">{a.baseName}</span>
-            <span className="push" />
-            {a.incidentId && <span className="mono dim small">#{a.incidentId}</span>}
-            <AmbChip a={a} />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
