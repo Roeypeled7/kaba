@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AMB_STATUS_LABEL, CALL_RATE_LABEL, DISTRICT, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, ROLE_LABEL, STATUS_LABEL, UNIT_LABEL } from '../engine/config';
 import { STATIONS_GEO } from '../engine/geo';
 import type { Ambulance, CallRate, Command, Incident, SimState, Station, TeamId, Vehicle } from '../engine/model';
+import { BASE, appPath, navigate } from '../router';
 import { unlockAudio, useAudioReady } from '../sound';
 
 export const fmtTime = (t: number) => new Date(t).toLocaleTimeString('he-IL', { hour12: false });
@@ -19,7 +20,7 @@ export interface ScreenDef {
   desc?: string;
 }
 
-/** המסכים בלי תצוגה (#/dispatch וכו׳) — נשארים לקישורים ישנים */
+/** המסכים בלי תצוגה (/dispatch וכו׳) — נשארים לקישורים ישנים */
 export const SCREENS: ScreenDef[] = [
   { path: '/dispatch', title: 'קבלה ושיגור', short: 'שיגור' },
   { path: '/events', title: 'לוח אירועים', short: 'אירועים' },
@@ -28,7 +29,7 @@ export const SCREENS: ScreenDef[] = [
   { path: '/map', title: 'מפה', short: 'מפה' },
 ];
 
-/* ── תצוגות: כל תצוגה היא סט מסכים לעמדה אחרת. נתיב: #/<תצוגה>/<מסך> ── */
+/* ── תצוגות: כל תצוגה היא סט מסכים לעמדה אחרת. נתיב: /<תצוגה>/<מסך> ── */
 
 export type ProfileId = '102' | 'ops';
 
@@ -60,16 +61,17 @@ export const PROFILES: Record<ProfileId, { title: string; short: string; accent:
 
 export const PROFILE_IDS = Object.keys(PROFILES) as ProfileId[];
 
-/** '#/102/events' → { profile: '102', path: '/events' }. תצוגה בלי מסך → המסך הראשון שלה */
-export function parseRoute(hash: string): { profile: ProfileId | null; path: string } {
-  const m = hash.match(/^#\/(102|ops)(\/.*)?$/);
-  if (!m) return { profile: null, path: hash.replace(/^#/, '') || '/' };
+/** '/102/events' → { profile: '102', path: '/events' }. תצוגה בלי מסך → המסך הראשון שלה */
+export function parseRoute(route: string): { profile: ProfileId | null; path: string } {
+  const m = route.match(/^\/(102|ops)(\/.*)?$/);
+  if (!m) return { profile: null, path: route || '/' };
   const profile = m[1] as ProfileId;
   return { profile, path: !m[2] || m[2] === '/' ? PROFILES[profile].screens[0].path : m[2] };
 }
-export const routeHref = (profile: ProfileId | null, path: string) => (profile ? `#/${profile}${path}` : `#${path}`);
+/** routeHref('102', '/events') → '/kaba/102/events' */
+export const routeHref = (profile: ProfileId | null, path: string) => BASE + [profile, path.replace(/^\//, '')].filter(Boolean).join('/');
 /** קישור למסך בתוך התצוגה הנוכחית */
-export const hereHref = (path: string) => routeHref(parseRoute(location.hash).profile, path);
+export const hereHref = (path: string) => routeHref(parseRoute(appPath(BASE)).profile, path);
 
 const isStation = (path: string) => path.startsWith('/station/');
 const navOn = (path: string, current: string) => (isStation(path) ? isStation(current) : current === path);
@@ -131,12 +133,12 @@ export function crewLabel(v: Vehicle): string {
   return v.crewName ?? UNIT_LABEL[v.type];
 }
 
-/** בורר תחנה ראשית — מחליף את ה-hash */
+/** בורר תחנה ראשית — מחליף את הנתיב */
 export function StationPicker({ state, current }: { state: SimState; current: number }) {
   return (
     <label className="station-picker">
       <span>תחנה</span>
-      <select value={current} onChange={(e) => (location.hash = hereHref(`/station/${e.target.value}`))}>
+      <select value={current} onChange={(e) => navigate(hereHref(`/station/${e.target.value}`))}>
         {mainStations(state.stations).map((s) => (
           <option key={s.id} value={s.id}>
             {s.id} · {stationShort(s)}
@@ -148,7 +150,7 @@ export function StationPicker({ state, current }: { state: SimState; current: nu
 }
 
 export function TopBar({ state, title, accent, children }: { state: SimState; title: string; accent?: string; children?: ReactNode }) {
-  const { profile, path } = parseRoute(location.hash);
+  const { profile, path } = parseRoute(appPath(BASE));
   const screens = profile ? PROFILES[profile].screens : SCREENS;
   return (
     <header className="topbar" style={accent ? ({ '--accent': accent } as React.CSSProperties) : undefined}>
@@ -160,7 +162,7 @@ export function TopBar({ state, title, accent, children }: { state: SimState; ti
         </div>
       </div>
       <nav className="topnav">
-        <a href="#/">⌂</a>
+        <a href={BASE}>⌂</a>
         {screens.map((s) => (
           <a key={s.path} href={routeHref(profile, s.path)} className={navOn(s.path, path) ? 'on' : ''}>
             {s.short}

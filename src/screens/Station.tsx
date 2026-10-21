@@ -17,6 +17,7 @@ import {
   turnUnit,
   VEHICLE_ACTIONS as ACTIONS,
 } from '../components/ui';
+import { TABLET_ROOT } from '../router';
 import { playAlarm, useSoundLoop } from '../sound';
 
 type Send = (c: Command) => void;
@@ -252,7 +253,7 @@ function VehicleCard({ v, state, send }: { v: Vehicle; state: SimState; send: Se
       <div className="veh-head">
         <span className="veh-sign mono">{v.unit}</span>
         <span className="dim">{UNIT_LABEL[v.type]}</span>
-        <a className="veh-mdt" href={`tablet/#/${encodeURIComponent(v.id)}`} target="_blank" rel="noopener" title="פתח את הטאבלט של הרכב בחלון נפרד">
+        <a className="veh-mdt" href={`${TABLET_ROOT}${encodeURIComponent(v.id)}`} target="_blank" rel="noopener" title="פתח את הטאבלט של הרכב בחלון נפרד">
           טאבלט
         </a>
       </div>

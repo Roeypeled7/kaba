@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react';
 import { INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
+import { BASE, TABLET_ROOT, navigate } from '../../router';
 import { audioReady, playSiren, unlockAudio, useSoundLoop } from '../../sound';
 import { IcBack, IcBarrier, IcBattery, IcFlame, IcGauge, IcHazard, IcHelmet, IcHome, IcHydrant, IcMenu, IcWalkie, IcWrenchCheck, Watermark } from './icons';
 import { useLocal, type Ctx, type Send } from './shared';
@@ -57,15 +58,15 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
   const scale = useFit(bezel ? W + 2 * BEZEL_X : W, bezel ? H + 2 * BEZEL_Y : H, bezel ? 24 : 0);
   const [drawer, setDrawer] = useState(false);
 
-  const base = v ? `#/${encodeURIComponent(v.id)}` : '#/';
+  const base = v ? `${TABLET_ROOT}${encodeURIComponent(v.id)}` : TABLET_ROOT;
   const go = (sub: string) => {
     setDrawer(false);
-    location.hash = sub ? `${base}/${sub}` : base;
+    navigate(sub ? `${base}/${sub}` : base);
   };
 
   const page = segs[0] ? PAGES[segs[0]] : undefined;
   const subTitle = !v ? 'בחירת רכב' : !page ? 'מסך הבית' : segs[0] === 'checks' && segs[1] ? CHECK_TITLE[segs[1]] ?? page.title : page.title;
-  const back = () => (!v ? (location.href = '../') : segs.length > 1 ? go(segs.slice(0, -1).join('/')) : segs.length ? go('') : (location.hash = '#/'));
+  const back = () => (!v ? (location.href = BASE) : segs.length > 1 ? go(segs.slice(0, -1).join('/')) : segs.length ? go('') : navigate(TABLET_ROOT));
 
   // הזנקה שממתינה לאישור ושכוללת את הרכב הזה
   const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
@@ -100,7 +101,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
             </div>
             <div className="mdt-bar-title">{v && st ? `${stationShort(st)} ${v.unit}` : 'טאבלט רכב'}</div>
             <div className="mdt-bar-l">
-              <button className="mdt-iconbtn" onClick={() => (v ? go('') : (location.hash = '#/'))} aria-label="מסך הבית">
+              <button className="mdt-iconbtn" onClick={() => (v ? go('') : navigate(TABLET_ROOT))} aria-label="מסך הבית">
                 <IcHome />
               </button>
               <button className="mdt-iconbtn" onClick={() => setDrawer(true)} aria-label="תפריט">
@@ -149,9 +150,9 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
                     <hr />
                   </>
                 )}
-                <button onClick={() => ((location.hash = '#/'), setDrawer(false))}>⇄ החלפת רכב</button>
+                <button onClick={() => (navigate(TABLET_ROOT), setDrawer(false))}>⇄ החלפת רכב</button>
                 <button onClick={() => (setFrame(bezel ? 'full' : 'bezel'), setDrawer(false))}>{bezel ? '⛶ מסך מלא' : '▭ תצוגת טאבלט'}</button>
-                <button onClick={() => (location.href = '../')}>↩ למשל״ט</button>
+                <button onClick={() => (location.href = BASE)}>↩ למשל״ט</button>
                 <div className="mdt-drawer-f">גרסה {MDT_VERSION} · מחובר להדמיה</div>
               </nav>
             </>
@@ -202,7 +203,7 @@ function Picker({ state }: { state: SimState }) {
           <h3>{stationShort(main)}</h3>
           <div className="mdt-pick-row">
             {vehicles.map((x) => (
-              <a key={x.id} className="mdt-pick" href={`#/${encodeURIComponent(x.id)}`}>
+              <a key={x.id} className="mdt-pick" href={`${TABLET_ROOT}${encodeURIComponent(x.id)}`}>
                 <span className={`mdt-pick-dot st-${x.status}`} />
                 <b className="mono">{x.unit}</b>
                 <span>{label(x)}</span>

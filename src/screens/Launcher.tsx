@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { Command, SimState } from '../engine/model';
 import type { ProfileId } from '../components/ui';
+import { TABLET_ROOT } from '../router';
 import { PROFILES, PROFILE_IDS, STATION_ACCENT, SimControls, TopBar, mainStations, routeHref, stationShort, subStations } from '../components/ui';
 
 /** הטאבלט הוא עמוד נפרד (tablet/) — אותו מנוע, קישור משלו */
-const TABLET_URL = 'tablet/';
+const TABLET_URL = TABLET_ROOT;
 
 const PICK_KEY = 'kaba.launcher.stations';
 const DEFAULT_PICK: [number, number] = [1, 4];
@@ -28,8 +29,7 @@ function savePick(p: [number, number]) {
   }
 }
 
-const openWin = (hash: string, i: number) =>
-  window.open(`${location.pathname}${hash}`, `kaba-${hash}`, `width=1280,height=800,left=${40 + i * 40},top=${40 + i * 30}`);
+const openWin = (href: string, i: number) => window.open(href, `kaba-${href}`, `width=1280,height=800,left=${40 + i * 40},top=${40 + i * 30}`);
 
 export default function Launcher({ state, send, shared }: { state: SimState; send: (c: Command) => void; shared: boolean }) {
   const mains = mainStations(state.stations);
