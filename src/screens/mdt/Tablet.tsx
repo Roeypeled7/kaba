@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
@@ -72,6 +72,10 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
   const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
   // סירנת כבאית כל עוד ההזנקה לא אושרה
   useSoundLoop(!!alarm, () => playSiren(2, 1.6), 3400);
+  // הזנקה חדשה פותחת מיד את מסך האירוע המפוצל (ניווט + פרטים); פס ההזנקה נשאר למעלה עד האישור
+  useEffect(() => {
+    if (alarm && segs[0] !== 'events') go('events');
+  }, [alarm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx: Ctx | null = v && st ? { state, send, v, st, segs, go } : null;
 
@@ -221,33 +225,32 @@ function AlarmOverlay({ ctx, dispatchIds }: { ctx: Ctx; dispatchIds: string[] })
   const inc = state.incidents.find((i) => i.id === v.incidentId);
   const t = inc ? INCIDENT_TYPE[inc.typeKey] : undefined;
   const units = inc ? state.vehicles.filter((x) => x.incidentId === inc.id) : [];
-  const ack = () => {
-    dispatchIds.forEach((id) => send({ type: 'ackDispatch', dispatchId: id }));
-    ctx.go('events');
-  };
+  const ack = () => dispatchIds.forEach((id) => send({ type: 'ackDispatch', dispatchId: id }));
+  // פס מהבהב מעל המסך המפוצל — הניווט והפרטים כבר פתוחים מתחתיו
   return (
     <div className="mdt-alarm">
       <div className="mdt-alarm-word">הזנקה</div>
-      {inc && t ? (
-        <>
-          <div className="mdt-alarm-type">
-            {t.icon} {t.label} <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
-          </div>
-          <div className="mdt-alarm-addr">📍 {inc.address}</div>
-          {inc.notes && <div className="mdt-alarm-notes">“{inc.notes}”</div>}
-          <div className="mdt-alarm-units">
-            {units.map((x) => (
-              <span key={x.id} className={x.id === v.id ? 'me' : ''}>
-                {x.callsign}
-              </span>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="mdt-alarm-type">הוזנקתם — פרטי האירוע מתעדכנים</div>
-      )}
+      <div className="mdt-alarm-info">
+        {inc && t ? (
+          <>
+            <div className="mdt-alarm-type">
+              {t.icon} {t.label} <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
+            </div>
+            <div className="mdt-alarm-addr">📍 {inc.address}</div>
+            <div className="mdt-alarm-units">
+              {units.map((x) => (
+                <span key={x.id} className={x.id === v.id ? 'me' : ''}>
+                  {x.callsign}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="mdt-alarm-type">הוזנקתם — פרטי האירוע מתעדכנים</div>
+        )}
+      </div>
       <button className="mdt-btn big white" onClick={ack}>
-        ✓ קיבלתי — לפרטי האירוע
+        ✓ קיבלתי
       </button>
     </div>
   );

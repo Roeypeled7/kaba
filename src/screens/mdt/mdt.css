@@ -272,18 +272,18 @@
 
 /* ── הזנקה ── */
 .mdt-alarm {
-  position: absolute; inset: 0; z-index: 50; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
-  background: #b71c1c; animation: mdt-flash 0.9s steps(2) infinite; text-align: center; padding: 40px;
+  position: absolute; top: 0; right: 0; left: 0; z-index: 1400; color: #fff; display: flex; align-items: center; gap: 22px;
+  background: #b71c1c; animation: mdt-flash 0.9s steps(2) infinite; padding: 14px 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 @keyframes mdt-flash { 50% { background: #7f0f0f; } }
-.mdt-alarm-word { font-size: 110px; font-weight: 900; line-height: 1; letter-spacing: 0.02em; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3); }
-.mdt-alarm-type { font-size: 38px; font-weight: 800; display: flex; align-items: center; gap: 14px; }
-.mdt-alarm-addr { font-size: 32px; font-weight: 700; }
-.mdt-alarm-notes { font-size: 22px; opacity: 0.9; max-width: 900px; }
-.mdt-alarm-units { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.mdt-alarm-units span { background: rgba(0, 0, 0, 0.3); padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 18px; }
+.mdt-alarm-word { font-size: 58px; font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.3); flex: none; }
+.mdt-alarm-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mdt-alarm-type { font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+.mdt-alarm-addr { font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mdt-alarm-units { display: flex; flex-wrap: wrap; gap: 6px; }
+.mdt-alarm-units span { background: rgba(0, 0, 0, 0.3); padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 15px; }
 .mdt-alarm-units span.me { background: #fff; color: #b71c1c; }
-.mdt-alarm .mdt-btn { margin-top: 14px; font-size: 26px; padding: 20px 50px; color: #b71c1c; }
+.mdt-alarm .mdt-btn { flex: none; font-size: 24px; padding: 18px 36px; color: #b71c1c; }
 .mdt-sev { font-size: 15px; font-weight: 800; padding: 3px 12px; border-radius: 20px; color: #111; }
 .mdt-sev.s1 { background: var(--mdt-steel); }
 .mdt-sev.s2 { background: var(--mdt-amber); }
@@ -436,22 +436,31 @@
 .mdt-nav { flex: 1; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--mdt-line); background: #e8e6e1; min-width: 0; }
 .mdt-nav .leaflet-container { position: absolute; inset: 0; width: 100%; height: 100%; background: #e8e6e1; }
 .mdt-nav .leaflet-tile-pane { filter: saturate(0.9); }
+/* מראה Waze: מסלול תכלת, פס הוראה כחול-כהה למעלה, פס הגעה לבן למטה */
 .mdt-nav-top {
   position: absolute; top: 12px; right: 12px; left: 12px; z-index: 500; display: flex; align-items: center; gap: 14px;
-  background: var(--mdt-bg); color: #fff; border-radius: 14px; padding: 12px 16px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); border: 1px solid var(--mdt-line);
+  background: #1f3b57; color: #fff; border-radius: 16px; padding: 12px 16px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
 }
-.mdt-nav-arrow { width: 54px; height: 54px; border-radius: 12px; background: var(--mdt-amber); color: #1a1200; display: grid; place-items: center; font-size: 30px; flex: none; }
-.mdt-nav-dest { font-size: 24px; font-weight: 800; line-height: 1.15; }
-.mdt-nav-sub { font-size: 14px; color: var(--mdt-dim); margin-top: 2px; }
+.mdt-nav-top > div { flex: 1; min-width: 0; }
+.mdt-nav-arrow { width: 54px; height: 54px; border-radius: 50%; background: #33ccff; color: #0b2233; display: grid; place-items: center; font-size: 30px; flex: none; }
+.mdt-nav-dest { font-size: 24px; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mdt-nav-sub { font-size: 14px; color: #a9c4dc; margin-top: 2px; }
+.mdt-waze-btn { flex: none; background: #33ccff; color: #0b2233; font-weight: 800; font-size: 16px; padding: 12px 16px; border-radius: 24px; text-decoration: none; }
+.mdt-waze-btn:active { transform: scale(0.97); }
 .mdt-nav-bottom {
   position: absolute; bottom: 12px; right: 12px; left: 12px; z-index: 500; display: flex; align-items: center; gap: 18px;
-  background: var(--mdt-bg); color: #fff; border-radius: 14px; padding: 12px 16px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); border: 1px solid var(--mdt-line);
+  background: #fff; color: #1d2733; border-radius: 16px; padding: 12px 18px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
 }
 .mdt-nav-eta { display: flex; align-items: baseline; gap: 6px; }
-.mdt-nav-eta b { font-size: 56px; line-height: 1; color: var(--mdt-amber); }
-.mdt-nav-eta span { font-size: 18px; color: var(--mdt-dim); }
+.mdt-nav-eta b { font-size: 56px; line-height: 1; color: #1d2733; }
+.mdt-nav-eta span { font-size: 18px; color: #66717d; }
 .mdt-nav-stats { display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
 .mdt-nav-stats b { font-size: 20px; }
+.mdt-nav-stats .dim { color: #66717d; }
+
+.mdt-update.fresh { border-color: var(--mdt-fire); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mdt-fire) 40%, transparent); animation: mdt-fresh 1s ease-out 2; }
+@keyframes mdt-fresh { 50% { background: color-mix(in srgb, var(--mdt-fire) 25%, var(--mdt-card)); } }
+.mdt-new { background: var(--mdt-fire); color: #fff; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 8px; }
 
 /* ── מסך מלא לתמונה/סרטון ── */
 /* מעל שכבות המפה של Leaflet (z-index 400–1000) */

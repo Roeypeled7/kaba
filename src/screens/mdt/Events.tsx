@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Polyline, useMap } from 'react-leaflet';
 import { AMB_STATUS_LABEL, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
@@ -8,6 +8,7 @@ import type { Incident, IncidentUpdate, LatLng, Vehicle } from '../../engine/mod
 import { DarkTiles, incidentIcon, stationIcon, vehicleIcon } from '../../components/mapkit';
 import { SceneMedia } from '../../components/scene';
 import { VEHICLE_ACTIONS, fmtElapsed, fmtHM, stationShort } from '../../components/ui';
+import { playPing } from '../../sound';
 import { fmtDate, unitFeed, type Ctx } from './shared';
 
 const STEPS: [Vehicle['status'], string][] = [
@@ -46,6 +47,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
   const act = VEHICLE_ACTIONS[v.status];
   const stepIdx = STEPS.findIndex(([s]) => s === v.status);
   const [view, setView] = useState<IncidentUpdate | null>(null);
+  const fresh = useFreshUpdates(inc);
 
   if (!inc) {
     return (
@@ -128,8 +130,9 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
           <div className="mdt-updates">
             {!updates.length && <div className="mdt-empty">עוד לא התקבלו עדכונים מהמוקד</div>}
             {updates.map((u) => (
-              <div key={u.id} className={`mdt-update ${u.media ? 'has-media' : ''}`}>
+              <div key={u.id} className={`mdt-update ${u.media ? 'has-media' : ''} ${fresh.has(u.id) ? 'fresh' : ''}`}>
                 <div className="mdt-update-head">
+                  {fresh.has(u.id) && <span className="mdt-new">חדש</span>}
                   <b>{u.from}</b>
                   <span className="mono dim">{fmtHM(u.t)}</span>
                   {u.media && <span className="mdt-update-kind">{u.media.kind === 'video' ? '🎥 סרטון' : '📷 תמונה'}</span>}
@@ -184,8 +187,8 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
           <DarkTiles />
           <FitBoth a={v.pos} b={inc.pos} id={inc.id} />
           <Marker position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} />
-          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#10151b', weight: 11, opacity: 0.85 }} />
-          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#ffb020', weight: 6 }} />
+          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#1b6fa8', weight: 13, opacity: 0.9 }} />
+          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#33ccff', weight: 8 }} />
           <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
           {others.map((x) => (
             <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
@@ -200,6 +203,9 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
               {t.icon} {t.label} · {driving ? 'בדרך לזירה' : v.status === 'onscene' ? 'בזירה' : STATUS_LABEL[v.status]}
             </div>
           </div>
+          <a className="mdt-waze-btn" href={`https://waze.com/ul?ll=${inc.pos.lat},${inc.pos.lng}&navigate=yes`} target="_blank" rel="noreferrer">
+            נווט ב-Waze
+          </a>
         </div>
         <div className="mdt-nav-bottom">
           <div className="mdt-nav-eta">
@@ -241,6 +247,28 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
       )}
     </div>
   );
+}
+
+/** עדכונים שהגיעו מהזירה בזמן שהמסך פתוח — מצלצל ומסמן "חדש" לחצי דקה */
+function useFreshUpdates(inc: Incident | undefined) {
+  const seen = useRef<{ inc?: string; ids: Set<number> }>({ ids: new Set() });
+  const [fresh, setFresh] = useState<Set<number>>(new Set());
+  const ids = inc?.updates.map((u) => u.id) ?? [];
+  useEffect(() => {
+    // אירוע חדש — מה שכבר קיים בו לא נחשב חדש
+    if (seen.current.inc !== inc?.id) {
+      seen.current = { inc: inc?.id, ids: new Set(ids) };
+      return;
+    }
+    const added = ids.filter((id) => !seen.current.ids.has(id));
+    if (!added.length) return;
+    added.forEach((id) => seen.current.ids.add(id));
+    playPing();
+    setFresh((f) => new Set([...f, ...added]));
+    const tm = setTimeout(() => setFresh((f) => new Set([...f].filter((id) => !added.includes(id)))), 30_000);
+    return () => clearTimeout(tm);
+  }, [inc?.id, ids.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  return fresh;
 }
 
 /** מתאים את התצוגה כך שהרכב והאירוע ייראו יחד */

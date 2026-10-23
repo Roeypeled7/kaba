@@ -87,6 +87,12 @@ export function playRing() {
   }
 }
 
+/** התראה על עדכון חדש מהזירה */
+export function playPing() {
+  tone(880, 0, 0.12, 'sine', 0.1);
+  tone(1320, 0.14, 0.2, 'sine', 0.1);
+}
+
 /** סקוולץ׳ של קשר */
 export function playBlip() {
   tone(1400, 0, 0.05, 'square', 0.04);
