@@ -4,6 +4,7 @@ import { STATIONS_GEO } from '../engine/geo';
 import type { Ambulance, CallRate, Command, Incident, SimState, Station, TeamId, Vehicle } from '../engine/model';
 import { BASE, appPath, navigate } from '../router';
 import { unlockAudio, useAudioReady } from '../sound';
+import { OperatorMenu } from './session';
 
 export const fmtTime = (t: number) => new Date(t).toLocaleTimeString('he-IL', { hour12: false });
 export const fmtHM = (t: number) => new Date(t).toLocaleTimeString('he-IL', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -171,6 +172,7 @@ export function TopBar({ state, title, accent, children }: { state: SimState; ti
       </nav>
       <div className="topbar-end">
         {children}
+        <OperatorMenu />
         <SoundToggle />
         <div className={`clock ${state.paused ? 'paused' : ''}`}>
           <span className="mono">{fmtTime(state.simTime)}</span>

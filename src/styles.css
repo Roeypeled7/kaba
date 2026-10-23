@@ -470,3 +470,73 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 @keyframes scene-zoom { from { transform: scale(1); } to { transform: scale(1.12) translate(-2%, -1%); } }
 @keyframes scene-drift { from { transform: translate(0, 0); } to { transform: translate(8px, -14px); } }
 @keyframes scene-flicker { from { transform: scaleY(0.9); } to { transform: scaleY(1.15); } }
+
+/* ── כניסה למערכת ── */
+.login-screen { min-height: 100%; display: grid; place-items: center; padding: 24px 16px; background: radial-gradient(ellipse at top, #1a1210, var(--bg) 60%); }
+.login-card { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.login-head { display: flex; align-items: center; gap: 12px; }
+.login-head .logo { font-size: 32px; }
+.login-head .t1 { font-size: 20px; font-weight: 800; }
+.login-field { display: flex; flex-direction: column; gap: 5px; }
+.login-field input { font-size: 16px; padding: 10px 12px; }
+.login-desks { display: flex; }
+.login-desks button { flex: 1; padding: 8px 6px; }
+.login-join { background: color-mix(in srgb, #1f6feb 18%, transparent); border: 1px solid #1f6feb; border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.login-online { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 12px; }
+.login-op { display: flex; align-items: center; gap: 8px; background: transparent; border: 0; color: var(--text); font: inherit; padding: 5px 6px; border-radius: 5px; cursor: pointer; text-align: start; }
+.login-op:hover { background: var(--panel-2); }
+.op-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.op-dot.on { background: var(--st-available); }
+.op-dot.brk { background: var(--st-dispatched); }
+
+/* ── תפריט מוקדן ── */
+.op-menu { position: relative; }
+.op-btn { gap: 8px; }
+.op-pop {
+  position: absolute; top: calc(100% + 6px); inset-inline-end: 0; z-index: 3000; width: 290px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+  display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 30px #000a;
+}
+.op-pop-head { display: flex; flex-direction: column; gap: 2px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.op-breaks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.op-breaks .btn { justify-content: space-between; }
+
+/* ── הפסקה ── */
+.break-overlay { position: fixed; inset: 0; z-index: 5000; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(6px); }
+.break-card { width: 100%; max-width: 380px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--st-dispatched); border-radius: var(--radius); padding: 26px 22px; display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.break-card.over { border-top-color: var(--st-onscene); }
+.break-ico { font-size: 44px; }
+.break-card .t1 { font-size: 20px; font-weight: 800; }
+.break-timer { font-size: 48px; font-weight: 800; color: var(--st-dispatched); margin: 6px 0; }
+.break-card.over .break-timer { color: var(--st-onscene); }
+.break-over { color: var(--st-onscene); font-weight: 700; }
+
+/* ── יומן מערכת ── */
+.log-screen { overflow-y: auto; }
+.log-main { width: 100%; max-width: 1300px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.log-main .panel { overflow: visible; }
+.log-desks { margin-inline-start: auto; display: flex; gap: 12px; flex-wrap: wrap; text-transform: none; letter-spacing: 0; font-weight: 500; }
+.log-desk b { color: var(--st-available); }
+.log-desk.empty b { color: var(--st-onscene); }
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th { text-align: start; color: var(--dim); font-weight: 600; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.log-table td { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); vertical-align: top; }
+.log-table tr.over td { background: color-mix(in srgb, var(--st-onscene) 10%, transparent); }
+.log-table td.mono { white-space: nowrap; }
+.log-acts { white-space: nowrap; text-align: end; }
+.log-acts .btn + .btn { margin-inline-start: 4px; }
+.op-status { font-weight: 700; }
+.op-status.on { color: var(--st-available); }
+.op-status.brk { color: var(--st-dispatched); }
+.log-filters { margin-bottom: 10px; }
+.log-filters select { flex: 0 1 200px; }
+.log-filters input { flex: 1 1 200px; }
+.log-who { white-space: nowrap; }
+.log-kind.k-session { background: color-mix(in srgb, #4cc9f0 22%, transparent); color: #4cc9f0; }
+.log-kind.k-action { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
+.log-kind.k-system { color: var(--dim); }
+.log-kind.k-blocked { background: color-mix(in srgb, var(--st-onscene) 25%, transparent); color: var(--st-onscene); }
+.log-entries tr.k-system td { color: var(--dim); }
+@media (max-width: 760px) {
+  .log-table { display: block; overflow-x: auto; }
+}

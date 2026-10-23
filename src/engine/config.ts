@@ -1,4 +1,4 @@
-import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate, CommanderRole, CrewMember, CrewRole, TeamId } from './model';
+import type { LatLng, Station, UnitType, Vehicle, Ambulance, VehicleStatus, AmbulanceStatus, IncidentStatus, CallRate, CommanderRole, CrewMember, CrewRole, TeamId, DeskId, BreakReason } from './model';
 import { ADDRESSES_GEO, DISTRICT_GEO, HOSPITALS, MDA_BASES, STATIONS_GEO } from './geo';
 
 /** כל המיקומים מגיעים מ-geo.ts */
@@ -177,6 +177,19 @@ export function randomName(rand: () => number): string {
 
 /** תדירות קריאות — ממוצע דקות סימולציה בין קריאות */
 export const CALL_RATE_MIN: Record<CallRate, number> = { off: Infinity, low: 8, med: 4, high: 2 };
+export const DESK_LABEL: Record<DeskId, string> = { '102': 'מוקד 102', ops: 'שיגור וניהול', super: 'אחראי משמרת' };
+
+/** סוגי הפסקה ומשך מותר (דק׳) — חריגה מסומנת בלוח המשמרת */
+export const BREAK_REASON: Record<BreakReason, { label: string; icon: string; limitMin: number }> = {
+  rest: { label: 'הפסקה קצרה', icon: '☕', limitMin: 15 },
+  meal: { label: 'ארוחה', icon: '🍽', limitMin: 30 },
+  briefing: { label: 'תדריך / הדרכה', icon: '📋', limitMin: 60 },
+  other: { label: 'אחר', icon: '⏸', limitMin: 20 },
+};
+
+/** חלון שלא שלח פעימה — נחשב סגור. מוקדן בלי חלונות — מנותק אוטומטית */
+export const SESSION_TIMING = { heartbeatMs: 20_000, windowStaleMs: 90_000, operatorTimeoutMs: 180_000 };
+
 export const CALL_RATE_LABEL: Record<CallRate, string> = { off: 'כבוי', low: 'נמוכה', med: 'בינונית', high: 'גבוהה' };
 
 /** ראשית: 41/475 פיקוד, 480 מנוף, 490 אשד, 440 צוות א, 406 צוות ב. משנה: 402 (ראשונה) / 401 (שנייה) */

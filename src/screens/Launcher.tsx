@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Command, SimState } from '../engine/model';
 import type { ProfileId } from '../components/ui';
-import { TABLET_ROOT } from '../router';
+import { BASE, TABLET_ROOT } from '../router';
 import { PROFILES, PROFILE_IDS, STATION_ACCENT, SimControls, TopBar, mainStations, routeHref, stationShort, subStations } from '../components/ui';
 
 /** הטאבלט הוא עמוד נפרד (tablet/) — אותו מנוע, קישור משלו */
@@ -148,6 +148,19 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
                 כאן
               </a>
             </div>
+          </div>
+        </section>
+
+        <section className="panel">
+          <h2>משמרת ויומן מערכת</h2>
+          <div className="row gap">
+            <span>
+              {state.operators.length} מחוברים · {state.operators.filter((o) => !o.onBreak).length} בעמדה ·{' '}
+              {state.operators.filter((o) => o.onBreak).length} בהפסקה
+            </span>
+            <a className="btn sm push" href={`${BASE}log`}>
+              🗂 יומן מערכת ולוח משמרת
+            </a>
           </div>
         </section>
 

@@ -1,15 +1,25 @@
-import { AMBULANCE_SPEED_KMH, DEFAULT_SPEED, DISTRICT, INCIDENT_TYPE, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
+import { AMBULANCE_SPEED_KMH, BREAK_REASON, DEFAULT_SPEED, DESK_LABEL, DISTRICT, INCIDENT_TYPE, SESSION_TIMING, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
+import { describeCommand } from './audit';
 import { applyRotation, assignTeams, distKm, mainStationId, nearestHospital, needDelta, recommend, requirement, type Need } from './dispatch';
 import { etaMin, makeCall, moveToward, nextCallDelayMs } from './simulation';
-import type { Ambulance, Assignment, ChannelId, Command, Incident, IncidentMedia, SimState, Station, Vehicle } from './model';
+import type { Actor, Ambulance, Assignment, AuditEntry, ChannelId, Command, Incident, IncidentMedia, Operator, SimState, Station, Vehicle } from './model';
 
 const MAX_RADIO = 400;
 const MAX_CALLS = 6;
+/** פקודות שמותרות גם למוקדן בהפסקה / לא מחובר */
+const SESSION_CMDS = new Set<Command['type']>(['login', 'logout', 'setBreak', 'heartbeat', 'windowClosed']);
+
+/** ‎1:05:09 */
+export function fmtDuration(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
 
 export function initialState(now: number): SimState {
   const { stations, vehicles, ambulances } = buildWorld(now);
   return {
     version: 0,
+    bootId: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     simTime: now,
     speed: DEFAULT_SPEED,
     paused: false,
@@ -29,6 +39,7 @@ export function initialState(now: number): SimState {
     mdaPending: [],
     pendingUpdates: [],
     pendingReplies: [],
+    operators: [],
   };
 }
 
@@ -69,6 +80,10 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 export class Engine {
   state: SimState;
   private listeners = new Set<(s: SimState) => void>();
+  private auditListeners = new Set<(e: AuditEntry) => void>();
+  private auditSeq = 0;
+  /** זמן אמת — ניתן להחלפה בבדיקות */
+  clock: () => number = Date.now;
 
   constructor(now = Date.now()) {
     this.state = initialState(now);
@@ -77,6 +92,31 @@ export class Engine {
   subscribe(fn: (s: SimState) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /** כל רשומת יומן חדשה */
+  onAudit(fn: (e: AuditEntry) => void): () => void {
+    this.auditListeners.add(fn);
+    return () => this.auditListeners.delete(fn);
+  }
+
+  private audit(e: Omit<AuditEntry, 'id' | 'at' | 't'>) {
+    const at = this.clock();
+    const entry: AuditEntry = { id: `${at.toString(36)}-${(this.auditSeq++).toString(36)}`, at, t: this.now, ...e };
+    for (const l of this.auditListeners) l(entry);
+  }
+
+  operator(badge: string | undefined) {
+    return badge ? this.state.operators.find((o) => o.badge === badge) : undefined;
+  }
+
+  /** מי ביצע — לשורת היומן */
+  private who(actor: Actor): Pick<AuditEntry, 'who' | 'badge' | 'desk' | 'vehicleId'> {
+    const op = this.operator(actor.badge);
+    if (op) return { who: `${op.name} (${op.badge})`, badge: op.badge, desk: op.desk };
+    if (actor.badge) return { who: `מס׳ ${actor.badge} (לא מחובר)`, badge: actor.badge };
+    if (actor.vehicleId) return { who: `טאבלט ${this.vehicle(actor.vehicleId)?.callsign ?? actor.vehicleId}`, vehicleId: actor.vehicleId };
+    return { who: 'לא מזוהה' };
   }
 
   private emit() {
@@ -185,6 +225,7 @@ export class Engine {
       const txt = missing.map(([k, n]) => `${n} ${UNIT_LABEL[k]}`).join(', ');
       this.radio('district', 'מערכת', 'מוקד', `⚠ חוסר כוחות לאירוע ${inc.id}: ${txt} — אין כוח זמין במחוז`, inc.id);
       this.log(inc, `חוסר כוחות: ${txt}`);
+      this.audit({ kind: 'system', action: 'shortage', who: 'מערכת', incidentId: inc.id, text: `חוסר כוחות לאירוע ${inc.id}: ${txt}` });
     }
   }
 
@@ -244,6 +285,7 @@ export class Engine {
     const senior = onScene.find((v) => v.type === 'commander') ?? onScene[0];
     this.radio('district', senior?.callsign ?? 'זירה', 'מוקד', `אירוע ${inc.id} נשלט. משחרר כוחות`, inc.id);
     this.log(inc, 'האירוע נשלט');
+    this.audit({ kind: 'system', action: 'controlled', who: 'מערכת', incidentId: inc.id, text: `אירוע ${inc.id} נשלט — שחרור כוחות` });
     for (const v of this.state.vehicles.filter((x) => x.incidentId === inc.id)) {
       if (v.status === 'onscene') this.setStatus(v, 'cleared');
       else if (v.status === 'dispatched') this.cancel(v);
@@ -256,6 +298,7 @@ export class Engine {
     inc.closedAt = this.now;
     this.log(inc, text);
     this.radio('district', 'מוקד', 'כל התחנות', `אירוע ${inc.id} (${this.label(inc)}) — ${text}`, inc.id, true);
+    this.audit({ kind: 'system', action: 'closed', who: 'מערכת', incidentId: inc.id, text: `אירוע ${inc.id} נסגר — ${text}` });
   }
 
   private statusReply(v: Vehicle): string {
@@ -278,8 +321,133 @@ export class Engine {
     }
   }
 
+  private incomingCall() {
+    const c = makeCall(`K${this.nextId()}`, this.now);
+    this.state.calls.push(c);
+    this.audit({ kind: 'system', action: 'call', who: 'מערכת', text: `קריאה נכנסת ${c.id}: ${INCIDENT_TYPE[c.typeKey].label} — ${c.caller}, ${c.phone}` });
+  }
+
+  // ───────────── מוקדנים ─────────────
+  private session(cmd: Extract<Command, { type: 'login' | 'logout' | 'setBreak' | 'heartbeat' | 'windowClosed' }>, actor: Actor) {
+    const s = this.state;
+    const t = this.clock();
+    switch (cmd.type) {
+      case 'login': {
+        const badge = cmd.badge.trim();
+        const name = cmd.name.trim();
+        if (!badge || !name) return;
+        const op = this.operator(badge);
+        if (op) {
+          op.windows[cmd.windowId] = t;
+          op.lastSeen = t;
+          this.audit({ kind: 'session', action: 'login', ...this.who({ badge }), text: `כניסה מחלון נוסף · ${DESK_LABEL[op.desk]}` });
+          return;
+        }
+        s.operators.push({ badge, name, desk: cmd.desk, loginAt: cmd.resume?.loginAt ?? t, onBreak: null, statusSince: t, breakMs: 0, breaks: 0, windows: { [cmd.windowId]: t }, lastSeen: t });
+        const how = cmd.resume ? 'חידוש כניסה אחרי הפעלה מחדש של המנוע' : 'כניסה למערכת';
+        this.audit({ kind: 'session', action: 'login', ...this.who({ badge }), text: `${how} · ${DESK_LABEL[cmd.desk]}` });
+        return;
+      }
+      case 'logout': {
+        const op = this.operator(cmd.badge);
+        if (!op) return;
+        const by = actor.badge && actor.badge !== op.badge ? this.who(actor) : null;
+        this.endShift(op, by ? `ניתוק ע״י ${by.who}` : 'יציאה מהמערכת');
+        return;
+      }
+      case 'setBreak': {
+        const op = this.operator(cmd.badge);
+        if (!op || op.onBreak === cmd.reason) return;
+        const prev = op.onBreak;
+        if (prev) {
+          op.breakMs += t - op.statusSince;
+          op.breaks++;
+        }
+        const took = fmtDuration(t - op.statusSince);
+        const over = prev && t - op.statusSince > BREAK_REASON[prev].limitMin * 60_000 ? ' · חריגה' : '';
+        op.onBreak = cmd.reason;
+        op.statusSince = t;
+        const by = actor.badge && actor.badge !== op.badge ? ` (ע״י ${this.who(actor).who})` : '';
+        const text = cmd.reason
+          ? `יציאה להפסקה: ${BREAK_REASON[cmd.reason].label}${prev ? ` (אחרי ${BREAK_REASON[prev].label}, ${took})` : ''}`
+          : `חזרה לעמדה אחרי ${BREAK_REASON[prev!].label} · ${took}${over}`;
+        this.audit({ kind: 'session', action: cmd.reason ? 'break' : 'back', ...this.who({ badge: op.badge }), text: text + by });
+        return;
+      }
+      case 'heartbeat': {
+        const op = this.operator(cmd.badge);
+        if (!op) return;
+        op.windows[cmd.windowId] = t;
+        op.lastSeen = t;
+        return;
+      }
+      case 'windowClosed':
+        for (const op of s.operators) delete op.windows[cmd.windowId];
+        return;
+    }
+  }
+
+  private endShift(op: Operator, reason: string) {
+    const t = this.clock();
+    const breakMs = op.breakMs + (op.onBreak ? t - op.statusSince : 0);
+    const breaks = op.breaks + (op.onBreak ? 1 : 0);
+    this.state.operators = this.state.operators.filter((o) => o !== op);
+    this.audit({
+      kind: 'session',
+      action: 'logout',
+      who: `${op.name} (${op.badge})`,
+      badge: op.badge,
+      desk: op.desk,
+      text: `${reason} · משמרת ${fmtDuration(t - op.loginAt)} · ${breaks} הפסקות (${fmtDuration(breakMs)})`,
+    });
+  }
+
+  /** חלונות שהפסיקו לשלוח פעימה נמחקים; מוקדן בלי חלונות מנותק אוטומטית. מחזיר אם משהו השתנה */
+  private sweepOperators(): boolean {
+    const t = this.clock();
+    let changed = false;
+    for (const op of [...this.state.operators]) {
+      for (const [w, seen] of Object.entries(op.windows))
+        if (t - seen > SESSION_TIMING.windowStaleMs) {
+          delete op.windows[w];
+          changed = true;
+        }
+      if (!Object.keys(op.windows).length && t - op.lastSeen > SESSION_TIMING.operatorTimeoutMs) {
+        this.endShift(op, 'ניתוק אוטומטי — כל החלונות נסגרו');
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   // ───────────── פקודות ─────────────
-  apply(cmd: Command) {
+  apply(cmd: Command, actor: Actor = {}) {
+    if (SESSION_CMDS.has(cmd.type)) {
+      this.session(cmd as Parameters<Engine['session']>[0], actor);
+      this.emit();
+      return;
+    }
+    const desc = describeCommand(this.state, cmd);
+    const op = this.operator(actor.badge);
+    // חלון משל״ט שהמוקדן שלו בהפסקה או לא מחובר — הפעולה לא מבוצעת, רק נרשמת
+    if (actor.badge && (!op || op.onBreak)) {
+      this.audit({ kind: 'blocked', action: cmd.type, ...this.who(actor), incidentId: desc?.incidentId, text: `נחסם (${op ? 'בהפסקה' : 'לא מחובר'}): ${desc?.text ?? cmd.type}` });
+      this.emit();
+      return;
+    }
+    const inc = desc?.incidentId ? this.incident(desc.incidentId) : undefined;
+    const before = inc?.vehicleIds.length ?? 0;
+    this.run(cmd);
+    if (!desc) return;
+    // מה ההזנקה שנבעה מהפקודה (שיגור אוטומטי, תגבור, העלאת חומרה) — נרשם באותה שורה
+    const after = this.incident(desc.incidentId ?? null);
+    const added = after ? after.vehicleIds.slice(after === inc ? before : 0) : [];
+    const signs = added.map((id) => this.vehicle(id)?.callsign ?? id).join(', ');
+    const dispatched = signs && cmd.type !== 'dispatchUnits' ? ` → הוזנקו: ${signs}` : '';
+    this.audit({ kind: 'action', action: cmd.type, ...this.who(actor), incidentId: desc.incidentId, text: desc.text + dispatched });
+  }
+
+  private run(cmd: Command) {
     const s = this.state;
     switch (cmd.type) {
       case 'openIncident': {
@@ -461,13 +629,15 @@ export class Engine {
         s.nextCallAt = this.now + Math.min(nextCallDelayMs(cmd.value), 30_000);
         break;
       case 'generateCall':
-        if (s.calls.length < MAX_CALLS) s.calls.push(makeCall(`K${this.nextId()}`, this.now));
+        if (s.calls.length < MAX_CALLS) this.incomingCall();
         break;
       case 'reset': {
-        const keep = { speed: s.speed, callRate: s.callRate };
+        const keep = { speed: s.speed, callRate: s.callRate, operators: s.operators, bootId: s.bootId };
         this.state = { ...initialState(Date.now()), ...keep, version: s.version };
         break;
       }
+      default:
+        break;
     }
     this.emit();
   }
@@ -475,7 +645,11 @@ export class Engine {
   // ───────────── שעון ─────────────
   tick(realDtMs: number) {
     const s = this.state;
-    if (s.paused) return;
+    const swept = this.sweepOperators();
+    if (s.paused) {
+      if (swept) this.emit();
+      return;
+    }
     const dtMs = realDtMs * s.speed;
     s.simTime += dtMs;
     this.step(dtMs / 1000);
@@ -488,7 +662,7 @@ export class Engine {
 
     // קריאות נכנסות
     if (s.callRate !== 'off' && now >= s.nextCallAt) {
-      if (s.calls.length < MAX_CALLS) s.calls.push(makeCall(`K${this.nextId()}`, now));
+      if (s.calls.length < MAX_CALLS) this.incomingCall();
       s.nextCallAt = now + nextCallDelayMs(s.callRate);
     }
 

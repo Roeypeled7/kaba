@@ -174,8 +174,65 @@ export interface RadioMsg {
 
 export type CallRate = 'off' | 'low' | 'med' | 'high';
 
+/* ── מוקדנים: כניסה למערכת, הפסקות ── */
+
+/** העמדה שהמוקדן התחבר אליה */
+export type DeskId = '102' | 'ops' | 'super';
+export type BreakReason = 'rest' | 'meal' | 'briefing' | 'other';
+
+/** מוקדן מחובר. מזוהה לפי מספר אישי — כמה חלונות (מסכים) יכולים להיות של אותו מוקדן */
+export interface Operator {
+  badge: string;
+  name: string;
+  desk: DeskId;
+  /** זמן אמת (ms) — לא זמן ההדמיה */
+  loginAt: number;
+  /** null = בעמדה; אחרת — סוג ההפסקה */
+  onBreak: BreakReason | null;
+  /** זמן אמת שבו נכנס לסטטוס הנוכחי */
+  statusSince: number;
+  /** סך ההפסקות שהסתיימו במשמרת (ms) */
+  breakMs: number;
+  breaks: number;
+  /** חלונות פתוחים: מזהה חלון → פעימה אחרונה (זמן אמת) */
+  windows: Record<string, number>;
+  lastSeen: number;
+}
+
+/** מי שלח את הפקודה — חלון משל״ט (לפי המוקדן שמחובר בו) או טאבלט רכב */
+export interface Actor {
+  badge?: string;
+  vehicleId?: string;
+}
+
+/**
+ * יומן מערכת — כל פעולה, כניסה/יציאה/הפסקה ואירוע מערכת.
+ * לא חלק מ-SimState: נשמר ב-IndexedDB, שורד איפוס הדמיה, ונשלח לחלונות כתוספות.
+ */
+export type AuditKind = 'session' | 'action' | 'system' | 'blocked';
+
+export interface AuditEntry {
+  id: string;
+  /** זמן אמת */
+  at: number;
+  /** זמן הדמיה */
+  t: number;
+  kind: AuditKind;
+  /** סוג הפקודה / האירוע: 'dispatchUnits', 'login', 'call'… */
+  action: string;
+  /** תצוגה: 'רועי פלד (1234)', 'טאבלט רחובות 440', 'מערכת' */
+  who: string;
+  badge?: string;
+  desk?: DeskId;
+  vehicleId?: string;
+  incidentId?: string;
+  text: string;
+}
+
 export interface SimState {
   version: number;
+  /** מזהה הפעלת המנוע — משתנה כשה-worker עולה מחדש (כל החלונות נסגרו), לא באיפוס */
+  bootId: string;
   simTime: number;
   speed: number;
   paused: boolean;
@@ -196,6 +253,8 @@ export interface SimState {
   pendingUpdates: { at: number; incidentId: string; from: string; text: string; media?: IncidentMedia }[];
   /** תגובות יחידות מתוזמנות (למשל לדיווח מצב) */
   pendingReplies: { at: number; channel: ChannelId; from: string; to?: string; text: string; incidentId?: string }[];
+  /** מוקדנים מחוברים — שורדים איפוס הדמיה */
+  operators: Operator[];
 }
 
 export type Command =
@@ -233,4 +292,13 @@ export type Command =
   | { type: 'setPaused'; value: boolean }
   | { type: 'setCallRate'; value: CallRate }
   | { type: 'generateCall' }
-  | { type: 'reset' };
+  | { type: 'reset' }
+  /** כניסה למערכת — או הצטרפות של חלון נוסף למוקדן שכבר מחובר */
+  | { type: 'login'; badge: string; name: string; desk: DeskId; windowId: string; resume?: { loginAt: number } }
+  /** יציאה מהמערכת (של המוקדן עצמו, או ניתוק ע״י אחראי משמרת) */
+  | { type: 'logout'; badge: string }
+  /** יציאה להפסקה (reason) או חזרה לעמדה (null) */
+  | { type: 'setBreak'; badge: string; reason: BreakReason | null }
+  /** פעימת חלון — מחזיקה את המוקדן מחובר כל עוד יש לו חלון פתוח */
+  | { type: 'heartbeat'; badge: string; windowId: string }
+  | { type: 'windowClosed'; windowId: string };
