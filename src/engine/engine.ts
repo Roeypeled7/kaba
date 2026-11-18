@@ -1,4 +1,4 @@
-import { AMBULANCE_SPEED_KMH, BREAK_REASON, DEFAULT_SPEED, DESK_LABEL, DISTRICT, INCIDENT_TYPE, SESSION_TIMING, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
+import { AMBULANCE_SPEED_KMH, BREAK_REASON, DEFAULT_SPEED, DESK_LABEL, DISTRICT, INCIDENT_TYPE, SESSION_TIMING, TABLET_TIMING, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
 import { describeCommand } from './audit';
 import { applyRotation, assignTeams, distKm, mainStationId, nearestHospital, needDelta, recommend, requirement, type Need } from './dispatch';
 import { etaMin, makeCall, moveToward, nextCallDelayMs } from './simulation';
@@ -402,6 +402,13 @@ export class Engine {
     });
   }
 
+  /** טאבלטים פתוחים: מזהה רכב → זמן אמת של הפעימה האחרונה. לא חלק מהמצב המשודר */
+  private tablets = new Map<string, number>();
+  private manned(v: Vehicle): boolean {
+    const t = this.tablets.get(v.id);
+    return t !== undefined && this.clock() - t < TABLET_TIMING.staleMs;
+  }
+
   /** חלונות שהפסיקו לשלוח פעימה נמחקים; מוקדן בלי חלונות מנותק אוטומטית. מחזיר אם משהו השתנה */
   private sweepOperators(): boolean {
     const t = this.clock();
@@ -422,6 +429,10 @@ export class Engine {
 
   // ───────────── פקודות ─────────────
   apply(cmd: Command, actor: Actor = {}) {
+    if (cmd.type === 'tabletBeat') {
+      this.tablets.set(cmd.vehicleId, this.clock());
+      return;
+    }
     if (SESSION_CMDS.has(cmd.type)) {
       this.session(cmd as Parameters<Engine['session']>[0], actor);
       this.emit();
@@ -705,11 +716,13 @@ export class Engine {
       const inc = this.incident(v.incidentId);
       switch (v.status) {
         case 'dispatched':
-          if (now - v.statusSince >= TIMING.turnout * 1000) this.depart(v);
+          // רכב שהטאבלט שלו פתוח לא יוצא לבד — הצוות לוחץ "יצאנו"
+          if (!this.manned(v) && now - v.statusSince >= TIMING.turnout * 1000) this.depart(v);
           break;
         case 'enroute':
           if (!inc || inc.status === 'closed') this.startReturn(v);
-          else if (moveToward(v.pos, inc.pos, UNIT_SPEED_KMH[v.type], dt)) this.arrive(v, inc);
+          // רכב שהטאבלט שלו פתוח נוסע עד הזירה ומחכה שם — ההגעה נרשמת רק כשהצוות לוחץ "במקום"
+          else if (moveToward(v.pos, inc.pos, UNIT_SPEED_KMH[v.type], dt) && !this.manned(v)) this.arrive(v, inc);
           break;
         case 'cleared':
           if (now - v.statusSince >= TIMING.clearedToReturn * 1000) this.startReturn(v);

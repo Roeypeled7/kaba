@@ -314,4 +314,6 @@ export type Command =
   | { type: 'setBreak'; badge: string; reason: BreakReason | null }
   /** פעימת חלון — מחזיקה את המוקדן מחובר כל עוד יש לו חלון פתוח */
   | { type: 'heartbeat'; badge: string; windowId: string }
+  /** פעימה מטאבלט פתוח של רכב — כל עוד היא מגיעה, הצוות נוהג ברכב בעצמו (יצאנו / במקום) */
+  | { type: 'tabletBeat'; vehicleId: string }
   | { type: 'windowClosed'; windowId: string };

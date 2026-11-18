@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { STATUS_LABEL } from '../../engine/config';
+import { STATUS_LABEL, TABLET_TIMING } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
 import { BASE, TABLET_ROOT, navigate } from '../../router';
@@ -75,6 +75,16 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
   useEffect(() => {
     if (alarm && segs[0] !== 'events') go('events');
   }, [alarm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // כל עוד הטאבלט פתוח הרכב לא יוצא ולא מגיע לבד — הצוות מדווח "יצאנו" ו"במקום"
+  const vehicleId = v?.id;
+  useEffect(() => {
+    if (!vehicleId) return;
+    const beat = () => send({ type: 'tabletBeat', vehicleId });
+    beat();
+    const id = setInterval(beat, TABLET_TIMING.beatMs);
+    return () => clearInterval(id);
+  }, [vehicleId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx: Ctx | null = v && st ? { state, send, v, st, segs, go } : null;
 

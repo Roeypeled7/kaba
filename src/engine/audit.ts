@@ -94,6 +94,7 @@ export function describeCommand(s: SimState, cmd: Command): { text: string; inci
     case 'logout':
     case 'setBreak':
     case 'heartbeat':
+    case 'tabletBeat':
     case 'windowClosed':
       return null;
   }

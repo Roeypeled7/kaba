@@ -188,6 +188,8 @@ export const BREAK_REASON: Record<BreakReason, { label: string; icon: string; li
 };
 
 /** חלון שלא שלח פעימה — נחשב סגור. מוקדן בלי חלונות — מנותק אוטומטית */
+/** טאבלט שלא שלח פעימה בזמן הזה נחשב סגור, והרכב חוזר לנהיגה אוטומטית */
+export const TABLET_TIMING = { beatMs: 10_000, staleMs: 30_000 };
 export const SESSION_TIMING = { heartbeatMs: 20_000, windowStaleMs: 90_000, operatorTimeoutMs: 180_000 };
 
 export const CALL_RATE_LABEL: Record<CallRate, string> = { off: 'כבוי', low: 'נמוכה', med: 'בינונית', high: 'גבוהה' };
