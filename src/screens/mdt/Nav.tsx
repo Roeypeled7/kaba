@@ -106,8 +106,8 @@ function instruction(s: Step): { text: string; arrow: string } {
 
 const fmtDist = (km: number) => (km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} מ׳` : `${km.toFixed(1)} ק״מ`);
 
-const meIcon = (bearing: number) =>
-  L.divIcon({ className: '', html: `<div class="mdt-nav-me" style="transform: rotate(${bearing}deg)"><i></i></div>`, iconSize: [84, 84], iconAnchor: [42, 42] });
+/** החץ של הרכב. הסיבוב שלו נקבע בכל פריים ב-Driver, כך שהוא תמיד מצביע למעלה על המסך */
+const ME_ICON = L.divIcon({ className: '', html: '<div class="mdt-nav-me"><i></i></div>', iconSize: [84, 84], iconAnchor: [42, 42] });
 
 /** מפת בסיס כהה ונקייה (Esri Dark Gray): רקע כהה, כבישים בהירים ושמות רחובות — הגוון הכחלחל של Waze נעשה ב-CSS (nav.css) */
 const TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
@@ -116,13 +116,73 @@ const FOLLOW_ZOOM = 17;
 /** היעד: סיכה אדומה שעומדת זקופה גם כשהמפה מסתובבת (‎--unspin מבטל את סיבוב המפה) */
 const DEST_ICON = L.divIcon({ className: '', html: '<div class="mdt-nav-dest-pin"><i></i></div>', iconSize: [0, 0], iconAnchor: [0, 0] });
 
-/** המפה תמיד ממורכזת על הרכב. משטח המפה ריבועי ומרכזו הוא הנקודה שבה הרכב נראה על המסך */
-function Camera({ pos }: { pos: LatLng }) {
+/** כיוון הדרך שלפני נקודה על המסלול: אל נקודה 40 מ׳ קדימה (יציב יותר ממקטע בודד); בסוף המסלול — כיוון המקטע האחרון */
+function headingAt(r: Route, km: number): number {
+  const here = along(r, km);
+  if (r.total - km <= 0.005) return here.bearing;
+  const fwd = along(r, km + 0.04).pos;
+  return (Math.atan2((fwd.lng - here.pos.lng) * Math.cos((here.pos.lat * Math.PI) / 180), fwd.lat - here.pos.lat) * 180) / Math.PI;
+}
+
+/**
+ * מניע את התצוגה בכל פריים, כדי שהתנועה תהיה חלקה: ההדמיה מעדכנת את מיקום הרכב רק כמה פעמים בשנייה,
+ * וכאן ממלאים את הרווח — הרכב גולש ממדידה למדידה בקצב קבוע, והמפה, קו המסלול, החץ והסיבוב זזים יחד איתו.
+ * המפה תמיד ממורכזת על הרכב ומסובבת כך שהדרך שלפניו פונה למעלה.
+ */
+function Driver({ route, done, me, lines, spin }: { route: Route; done: number; me: React.RefObject<L.Marker>; lines: React.RefObject<L.Polyline>[]; spin: React.RefObject<HTMLDivElement> }) {
   const map = useMap();
-  const key = `${pos.lat.toFixed(5)},${pos.lng.toFixed(5)}`;
+  const anim = useRef({ from: done, to: done, start: 0, dur: 400, last: 0, shown: done, angle: null as number | null, key: '' });
+
+  // מדידה חדשה מההדמיה: גולשים אליה מהמקום שמוצג עכשיו, במשך הזמן שעבר מאז המדידה הקודמת
   useEffect(() => {
-    map.setView([pos.lat, pos.lng], FOLLOW_ZOOM, { animate: true });
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+    const a = anim.current;
+    const now = performance.now();
+    if (!a.last || Math.abs(done - a.shown) > 0.5) a.from = a.to = a.shown = done; // התחלה, או קפיצה (הגעה / מסלול חדש) — בלי גלישה
+    else {
+      a.from = a.shown;
+      a.to = done;
+      a.start = now;
+      a.dur = Math.max(250, Math.min(1500, now - a.last));
+    }
+    a.last = now;
+  }, [done, route]);
+
+  useEffect(() => {
+    let raf = 0;
+    let prev = performance.now();
+    anim.current.key = ''; // מסלול חדש — לצייר מחדש גם אם הרכב לא זז
+    const frame = (now: number) => {
+      const a = anim.current;
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      a.shown = a.from + (a.to - a.from) * Math.min(1, (now - a.start) / a.dur);
+      const { pos } = along(route, a.shown);
+      // הסיבוב מתקרב לכיוון הדרך בהדרגה, ובדרך הקצרה (359°→1° לא מסובב סיבוב שלם)
+      const want = -headingAt(route, a.shown);
+      if (a.angle === null) a.angle = want;
+      else a.angle += (((((want - a.angle) % 360) + 540) % 360) - 180) * (1 - Math.exp(-dt / 0.35));
+
+      const key = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)},${a.angle.toFixed(2)}`;
+      if (key !== a.key) {
+        a.key = key;
+        map.setView([pos.lat, pos.lng], FOLLOW_ZOOM, { animate: false });
+        me.current?.setLatLng([pos.lat, pos.lng]);
+        const arrow = me.current?.getElement()?.firstElementChild as HTMLElement | null | undefined;
+        if (arrow) arrow.style.transform = `rotate(${-a.angle}deg)`;
+        if (spin.current) {
+          spin.current.style.transform = `rotate(${a.angle}deg)`;
+          spin.current.style.setProperty('--unspin', `${-a.angle}deg`);
+        }
+        // קו המסלול מתחיל תמיד בדיוק מהרכב
+        const cut = route.cum.findIndex((c) => c > a.shown);
+        const ahead: [number, number][] = [[pos.lat, pos.lng], ...route.pts.slice(cut < 0 ? route.pts.length : cut).map((p) => [p.lat, p.lng] as [number, number])];
+        for (const l of lines) l.current?.setLatLngs(ahead);
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [route, map]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -149,7 +209,6 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
   const air = distKm(st.pos, inc.pos) || 1;
   const progress = arrived ? 1 : waiting ? 0 : Math.max(0, Math.min(1, 1 - distKm(v.pos, inc.pos) / air));
   const done = route.total * progress;
-  const me = along(route, done);
   const left = route.total - done;
   const eta = etaMin(v.pos, inc.pos, UNIT_SPEED_KMH[v.type]);
 
@@ -161,29 +220,23 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
   const toNext = Math.max(0, acc + route.steps[idx].km - done);
   const ins = instruction(next);
 
-  const line = route.pts.map((p) => [p.lat, p.lng] as [number, number]);
-  const cut = route.cum.findIndex((c) => c > done);
-  const ahead: [number, number][] = [[me.pos.lat, me.pos.lng], ...line.slice(cut < 0 ? line.length : cut)];
+  // מיקום התחלתי בלבד לרכב ולקו — מכאן Driver מזיז אותם בכל פריים
+  const line = useMemo(() => route.pts.map((p) => [p.lat, p.lng] as [number, number]), [route]);
+  const start = useMemo<[number, number]>(() => [route.pts[0].lat, route.pts[0].lng], [route]);
+  const meRef = useRef<L.Marker>(null);
+  const lineA = useRef<L.Polyline>(null);
+  const lineB = useRef<L.Polyline>(null);
+  const spinRef = useRef<HTMLDivElement>(null);
   const others = state.vehicles.filter((x) => x.incidentId === inc.id && x.id !== v.id);
 
   const speed = driving && left > 0.02 ? UNIT_SPEED_KMH[v.type] : 0;
   const nextName = next.type === 'arrive' ? inc.address : next.name;
 
-  // כיוון הדרך שלפני הרכב: מהמיקום שלו אל נקודה 40 מ׳ קדימה על המסלול (יציב יותר ממקטע בודד); בסוף המסלול — כיוון המקטע האחרון
-  const fwd = along(route, done + 0.04).pos;
-  const heading =
-    route.total - done > 0.005 ? (Math.atan2((fwd.lng - me.pos.lng) * Math.cos((me.pos.lat * Math.PI) / 180), fwd.lat - me.pos.lat) * 180) / Math.PI : me.bearing;
-  // המפה תמיד מסובבת כך שהדרך שלפני הרכב פונה למעלה והחץ מצביע למעלה — גם לפני היציאה (כמו ב-Waze).
-  // הזווית נצברת, כדי שמעבר 359°→1° לא יסובב סיבוב שלם
-  const spin = useRef(0);
-  const target = -heading;
-  spin.current += ((((target - spin.current) % 360) + 540) % 360) - 180;
-
   return (
     <section className="mdt-nav waze">
       {/* המפה מוטה מעט לאחור — גדולה מהמסגרת כדי למלא אותה גם בסיבוב */}
       <div className="mdt-nav-tilt">
-       <div className="mdt-nav-spin" style={{ transform: `rotate(${spin.current}deg)`, '--unspin': `${-spin.current}deg` } as React.CSSProperties}>
+       <div className="mdt-nav-spin" ref={spinRef}>
         <MapContainer
           center={[inc.pos.lat, inc.pos.lng]}
           zoom={14}
@@ -198,18 +251,18 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
           boxZoom={false}
         >
           <TileLayer url={TILES} maxZoom={19} maxNativeZoom={16} />
-          <Camera pos={me.pos} />
+          <Driver route={route} done={done} me={meRef} lines={[lineA, lineB]} spin={spinRef} />
           {!arrived && (
             <>
-              <Polyline positions={ahead} pathOptions={{ color: '#0e86b8', weight: 34, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }} />
-              <Polyline positions={ahead} pathOptions={{ color: '#2fd6ff', weight: 24, lineCap: 'round', lineJoin: 'round' }} />
+              <Polyline ref={lineA} positions={line} pathOptions={{ color: '#0e86b8', weight: 34, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }} />
+              <Polyline ref={lineB} positions={line} pathOptions={{ color: '#2fd6ff', weight: 24, lineCap: 'round', lineJoin: 'round' }} />
             </>
           )}
           <Marker position={[inc.pos.lat, inc.pos.lng]} icon={DEST_ICON} interactive={false} />
           {others.map((x) => (
             <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
           ))}
-          <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(heading)} zIndexOffset={500} />
+          <Marker ref={meRef} position={start} icon={ME_ICON} zIndexOffset={500} interactive={false} />
         </MapContainer>
        </div>
       </div>
