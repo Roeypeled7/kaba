@@ -5,7 +5,7 @@ import { INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config
 import { distKm } from '../../engine/dispatch';
 import { etaMin } from '../../engine/simulation';
 import type { Incident, LatLng } from '../../engine/model';
-import { incidentIcon, vehicleIcon } from '../../components/mapkit';
+import { vehicleIcon } from '../../components/mapkit';
 import { fmtHM } from '../../components/ui';
 import type { Ctx } from './shared';
 import './nav.css';
@@ -113,6 +113,9 @@ const meIcon = (bearing: number) =>
 const TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 const FOLLOW_ZOOM = 17;
 
+/** היעד: סיכה אדומה שעומדת זקופה גם כשהמפה מסתובבת (‎--unspin מבטל את סיבוב המפה) */
+const DEST_ICON = L.divIcon({ className: '', html: '<div class="mdt-nav-dest-pin"><i></i></div>', iconSize: [0, 0], iconAnchor: [0, 0] });
+
 /** המפה תמיד ממורכזת על הרכב. משטח המפה ריבועי ומרכזו הוא הנקודה שבה הרכב נראה על המסך */
 function Camera({ pos }: { pos: LatLng }) {
   const map = useMap();
@@ -202,7 +205,7 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
               <Polyline positions={ahead} pathOptions={{ color: '#2fd6ff', weight: 24, lineCap: 'round', lineJoin: 'round' }} />
             </>
           )}
-          <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
+          <Marker position={[inc.pos.lat, inc.pos.lng]} icon={DEST_ICON} interactive={false} />
           {others.map((x) => (
             <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
           ))}
