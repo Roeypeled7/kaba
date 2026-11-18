@@ -112,7 +112,7 @@ const streetIcon = (name: string) => L.divIcon({ className: '', html: `<div clas
 
 /** אריחי OpenStreetMap — הגוון הכהה של Waze נעשה ב-CSS (nav.css) */
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const FOLLOW_ZOOM = 18;
+const FOLLOW_ZOOM = 17;
 
 /** בנסיעה — המפה עוקבת אחרי הרכב מקרוב, והרכב בשליש התחתון; לפני היציאה — המסלול כולו; אחרי ההגעה — הזירה */
 function Camera({ mode, pos, bounds }: { mode: 'follow' | 'overview' | 'scene'; pos: LatLng; bounds: L.LatLngBounds }) {
@@ -188,7 +188,7 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
 
   return (
     <section className="mdt-nav waze">
-      {/* המפה מוטה לאחור (מבט נהג) — גדולה מהמסגרת כדי למלא אותה גם אחרי ההטיה */}
+      {/* המפה כמעט שטוחה, עם הטיה קלה לאחור — גדולה מהמסגרת כדי למלא אותה גם בסיבוב */}
       <div className="mdt-nav-tilt">
        <div className="mdt-nav-spin" style={{ transform: `rotate(${spin.current}deg)`, '--unspin': `${-spin.current}deg` } as React.CSSProperties}>
         <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={14} zoomControl={false} attributionControl={false}>
