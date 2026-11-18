@@ -1,14 +1,43 @@
-/* ═══ ניווט בטאבלט — משלים את כללי mdt-nav שב-mdt.css ═══ */
+/* ═══ ניווט בטאבלט במראה של Waze (מצב כהה) — משלים את כללי mdt-nav שב-mdt.css ═══ */
+.mdt-nav.waze { background: #1c2733; border-color: #0d1319; }
 
-/* הרכב שלנו: חץ תכלת שמסתובב לכיוון הנסיעה */
-.mdt-nav-me { width: 46px; height: 46px; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); display: grid; place-items: center; transition: transform 0.4s; }
-.mdt-nav-me i { width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-bottom: 26px solid #1b9be0; transform: translateY(-2px); }
+/* המפה מוטה לאחור כמו מבט נהג. המשטח גדול מהמסגרת כדי שימלא אותה גם אחרי ההטיה */
+.mdt-nav-tilt { position: absolute; left: -90%; right: -90%; top: -230%; bottom: -4%; transform: perspective(1100px) rotateX(50deg); transform-origin: 50% 100%; }
+.mdt-nav.waze .leaflet-container { position: absolute; inset: 0; width: 100%; height: 100%; background: #1c2733; }
+/* אריחים כהים בגוון כחול-פלדה */
+.mdt-nav.waze .leaflet-tile-pane { filter: invert(1) brightness(2.1) contrast(0.88) sepia(0.8) hue-rotate(172deg) saturate(1); }
 
-/* פס הנסיעה: זמן, מרחק ושעת הגעה — רק בזמן נסיעה */
-.mdt-nav-trip {
-  position: absolute; bottom: 12px; right: 12px; left: 12px; z-index: 500; display: flex; align-items: baseline; justify-content: center; gap: 12px;
-  background: #fff; color: #1d2733; border-radius: 16px; padding: 10px 18px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3); font-size: 18px;
+/* הרכב שלנו: חץ תכלת עם שוליים לבנים, מסתובב לכיוון הנסיעה */
+.mdt-nav-me { position: relative; width: 84px; height: 84px; transition: transform 0.4s; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.55)); }
+.mdt-nav-me::before, .mdt-nav-me i { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); clip-path: polygon(50% 0, 100% 100%, 50% 78%, 0 100%); }
+.mdt-nav-me::before { width: 78px; height: 84px; background: #fff; }
+.mdt-nav-me i { width: 58px; height: 62px; margin-top: 2px; background: #19b6d8; }
+
+/* תווית שם רחוב על המסלול */
+.mdt-nav-street {
+  position: absolute; transform: translate(-50%, -135%); white-space: nowrap; background: #17799e; color: #fff; font-size: 34px; font-weight: 800; line-height: 1.2;
+  padding: 6px 14px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
 }
-.mdt-nav-trip b { font-size: 24px; }
-.mdt-nav-trip > b:first-child { font-size: 40px; line-height: 1; color: #1b9be0; }
-.mdt-nav-trip i { width: 1px; align-self: stretch; background: #d5dae0; }
+
+/* פס ההוראה: שחור, חץ לבן גדול, מרחק בגדול */
+.mdt-nav.waze .mdt-nav-top { top: 0; right: 0; left: 0; border-radius: 0; background: #000; padding: 14px 22px; gap: 20px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); }
+.mdt-nav.waze .mdt-nav-arrow { width: 64px; height: 64px; background: none; color: #fff; font-size: 60px; line-height: 1; border-radius: 0; }
+.mdt-nav-dist { font-size: 40px; font-weight: 800; line-height: 1.05; color: #fff; }
+.mdt-nav.waze .mdt-nav-sub { font-size: 18px; color: #c5ced8; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* פס הנסיעה: שעת הגעה בגדול, מתחתיה דקות ומרחק */
+.mdt-nav-trip {
+  position: absolute; bottom: 0; right: 0; left: 0; z-index: 500; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: #1f242b; color: #fff; border-radius: 18px 18px 0 0; padding: 10px 18px 12px; box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.4);
+}
+.mdt-nav-trip b { font-size: 38px; font-weight: 800; line-height: 1.05; }
+.mdt-nav-trip span { font-size: 19px; color: #aab3bd; }
+.mdt-nav-trip i { font-style: normal; margin: 0 6px; }
+
+/* מד מהירות */
+.mdt-nav-speed {
+  position: absolute; bottom: 104px; left: 16px; z-index: 500; width: 78px; height: 78px; border-radius: 50%; background: #1f242b; border: 3px solid #2d343d;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+.mdt-nav-speed b { font-size: 28px; line-height: 1; }
+.mdt-nav-speed span { font-size: 12px; color: #aab3bd; }

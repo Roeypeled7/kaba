@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import L from 'leaflet';
-import { MapContainer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import { INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
 import { distKm } from '../../engine/dispatch';
 import { etaMin } from '../../engine/simulation';
 import type { Incident, LatLng } from '../../engine/model';
-import { DarkTiles, incidentIcon, vehicleIcon } from '../../components/mapkit';
+import { incidentIcon, vehicleIcon } from '../../components/mapkit';
 import { fmtHM } from '../../components/ui';
 import type { Ctx } from './shared';
 import './nav.css';
@@ -22,6 +22,8 @@ interface Step {
   type: string;
   modifier?: string;
   exit?: number;
+  /** מיקום התמרון — לתווית שם הרחוב על המסלול */
+  at?: LatLng;
 }
 interface Route {
   pts: LatLng[];
@@ -51,12 +53,13 @@ function fetchRoute(from: LatLng, to: LatLng): Promise<Route | null> {
         const r = j?.routes?.[0];
         if (!r) return null;
         const pts: LatLng[] = r.geometry.coordinates.map(([lng, lat]: [number, number]) => ({ lat, lng }));
-        const steps: Step[] = r.legs[0].steps.map((s: { distance: number; name: string; maneuver: { type: string; modifier?: string; exit?: number } }) => ({
+        const steps: Step[] = r.legs[0].steps.map((s: { distance: number; name: string; maneuver: { type: string; modifier?: string; exit?: number; location: [number, number] } }) => ({
           km: s.distance / 1000,
           name: s.name,
           type: s.maneuver.type,
           modifier: s.maneuver.modifier,
           exit: s.maneuver.exit,
+          at: { lat: s.maneuver.location[1], lng: s.maneuver.location[0] },
         }));
         return pts.length > 1 ? build(pts, steps) : null;
       })
@@ -104,16 +107,27 @@ function instruction(s: Step): { text: string; arrow: string } {
 const fmtDist = (km: number) => (km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} מ׳` : `${km.toFixed(1)} ק״מ`);
 
 const meIcon = (bearing: number) =>
-  L.divIcon({ className: '', html: `<div class="mdt-nav-me" style="transform: rotate(${bearing}deg)"><i></i></div>`, iconSize: [46, 46], iconAnchor: [23, 23] });
+  L.divIcon({ className: '', html: `<div class="mdt-nav-me" style="transform: rotate(${bearing}deg)"><i></i></div>`, iconSize: [84, 84], iconAnchor: [42, 42] });
+const streetIcon = (name: string) => L.divIcon({ className: '', html: `<div class="mdt-nav-street">${name.replace(/[<>&]/g, '')}</div>`, iconSize: [0, 0], iconAnchor: [0, 0] });
 
-/** בנסיעה — המפה עוקבת אחרי הרכב מקרוב; לפני היציאה ואחרי ההגעה — מבט על המסלול כולו / על הזירה */
+/** אריחי OpenStreetMap — הגוון הכהה של Waze נעשה ב-CSS (nav.css) */
+const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const FOLLOW_ZOOM = 18;
+
+/** בנסיעה — המפה עוקבת אחרי הרכב מקרוב, והרכב בשליש התחתון; לפני היציאה — המסלול כולו; אחרי ההגעה — הזירה */
 function Camera({ mode, pos, bounds }: { mode: 'follow' | 'overview' | 'scene'; pos: LatLng; bounds: L.LatLngBounds }) {
   const map = useMap();
   const key = mode === 'follow' ? `${pos.lat.toFixed(5)},${pos.lng.toFixed(5)}` : bounds.toBBoxString();
   useEffect(() => {
-    if (mode === 'follow') map.setView([pos.lat, pos.lng], 16, { animate: true });
-    else if (mode === 'scene') map.setView(bounds.getCenter(), 17, { animate: true });
-    else map.fitBounds(bounds, { paddingTopLeft: [50, 120], paddingBottomRight: [50, 50], maxZoom: 16, animate: false });
+    if (mode === 'follow') {
+      const p = map.project([pos.lat, pos.lng], FOLLOW_ZOOM).subtract([0, map.getSize().y * 0.3]);
+      map.setView(map.unproject(p, FOLLOW_ZOOM), FOLLOW_ZOOM, { animate: true });
+    } else if (mode === 'scene') map.setView(bounds.getCenter(), 17, { animate: true });
+    else {
+      // המשטח המוטה גדול מהמסגרת — המסלול צריך להיכנס לחלק התחתון-מרכזי שלו, שהוא מה שנראה
+      const { x, y } = map.getSize();
+      map.fitBounds(bounds, { paddingTopLeft: [x * 0.36, y * 0.62], paddingBottomRight: [x * 0.36, y * 0.1], maxZoom: 16, animate: false });
+    }
   }, [mode, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
@@ -159,54 +173,70 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
   const bounds = useMemo(() => (arrived ? L.latLngBounds([inc.pos.lat, inc.pos.lng], [inc.pos.lat, inc.pos.lng]) : L.latLngBounds(line)), [arrived, route]); // eslint-disable-line react-hooks/exhaustive-deps
   const others = state.vehicles.filter((x) => x.incidentId === inc.id && x.id !== v.id);
 
+  // שמות הרחובות הבאים על המסלול — תוויות כמו ב-Waze
+  const streets: { name: string; at: LatLng }[] = [];
+  for (let i = idx + 1; i < route.steps.length && streets.length < 3; i++) {
+    const st2 = route.steps[i];
+    if (st2.name && st2.at && st2.type !== 'arrive' && !streets.some((x) => x.name === st2.name)) streets.push({ name: st2.name, at: st2.at });
+  }
+  const speed = driving && left > 0.02 ? UNIT_SPEED_KMH[v.type] : 0;
+  const nextName = next.type === 'arrive' ? inc.address : next.name;
+
   return (
-    <section className="mdt-nav">
-      <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={14} zoomControl={false} attributionControl={false}>
-        <DarkTiles />
-        <Camera mode={driving ? 'follow' : arrived ? 'scene' : 'overview'} pos={me.pos} bounds={bounds} />
-        {!arrived && (
-          <>
-            <Polyline positions={ahead} pathOptions={{ color: '#1b6fa8', weight: 14, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }} />
-            <Polyline positions={ahead} pathOptions={{ color: '#33ccff', weight: 9, lineCap: 'round', lineJoin: 'round' }} />
-          </>
-        )}
-        <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
-        {others.map((x) => (
-          <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
-        ))}
-        <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(me.bearing)} zIndexOffset={500} />
-      </MapContainer>
+    <section className="mdt-nav waze">
+      {/* המפה מוטה לאחור (מבט נהג) — גדולה מהמסגרת כדי למלא אותה גם אחרי ההטיה */}
+      <div className="mdt-nav-tilt">
+        <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={14} zoomControl={false} attributionControl={false}>
+          <TileLayer url={TILES} maxZoom={19} />
+          <Camera mode={driving ? 'follow' : arrived ? 'scene' : 'overview'} pos={me.pos} bounds={bounds} />
+          {!arrived && (
+            <>
+              <Polyline positions={ahead} pathOptions={{ color: '#0e86b8', weight: 34, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }} />
+              <Polyline positions={ahead} pathOptions={{ color: '#2fd6ff', weight: 24, lineCap: 'round', lineJoin: 'round' }} />
+            </>
+          )}
+          {!arrived && streets.map((x) => <Marker key={x.name} position={[x.at.lat, x.at.lng]} icon={streetIcon(x.name)} interactive={false} />)}
+          <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
+          {others.map((x) => (
+            <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
+          ))}
+          <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(me.bearing)} zIndexOffset={500} />
+        </MapContainer>
+      </div>
 
       <div className="mdt-nav-top">
         <span className="mdt-nav-arrow">{driving ? ins.arrow : arrived ? '📍' : '↑'}</span>
         {driving ? (
           <div>
-            <div className="mdt-nav-dest">
-              <span className="mono">{fmtDist(toNext)}</span> · {ins.text}
+            <div className="mdt-nav-dist">{fmtDist(toNext)}</div>
+            <div className="mdt-nav-sub">
+              {ins.text}
+              {nextName && ` · ${nextName}`}
             </div>
-            <div className="mdt-nav-sub">{next.type === 'arrive' ? inc.address : next.name || inc.address}</div>
           </div>
         ) : (
           <div>
             <div className="mdt-nav-dest">{inc.address}</div>
             <div className="mdt-nav-sub">
-              {t.icon} {t.label} · {arrived ? 'הגעתם ליעד' : waiting ? `${fmtDist(route.total)} · כ-${eta} דק׳ נסיעה` : STATUS_LABEL[v.status]}
+              {t.icon} {t.label} · {arrived ? 'הגעתם ליעד' : waiting ? 'ממתין ליציאה' : STATUS_LABEL[v.status]}
             </div>
           </div>
         )}
       </div>
 
-      {driving && (
-        <div className="mdt-nav-trip">
-          <b className="mono">{eta}</b>
-          <span>דק׳</span>
-          <i />
-          <b className="mono">{fmtDist(left)}</b>
-          <i />
-          <span>
-            הגעה <b className="mono">{fmtHM(state.simTime + eta * 60_000)}</b>
-          </span>
-        </div>
+      {!arrived && (
+        <>
+          <div className="mdt-nav-speed">
+            <b className="mono">{speed}</b>
+            <span>קמ״ש</span>
+          </div>
+          <div className="mdt-nav-trip">
+            <b className="mono">{fmtHM(state.simTime + eta * 60_000)}</b>
+            <span>
+              {eta} דק׳ <i>•</i> {fmtDist(left)}
+            </span>
+          </div>
+        </>
       )}
     </section>
   );
