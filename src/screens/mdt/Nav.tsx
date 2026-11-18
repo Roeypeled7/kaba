@@ -110,8 +110,8 @@ const meIcon = (bearing: number) =>
   L.divIcon({ className: '', html: `<div class="mdt-nav-me" style="transform: rotate(${bearing}deg)"><i></i></div>`, iconSize: [84, 84], iconAnchor: [42, 42] });
 const streetIcon = (name: string) => L.divIcon({ className: '', html: `<div class="mdt-nav-street">${name.replace(/[<>&]/g, '')}</div>`, iconSize: [0, 0], iconAnchor: [0, 0] });
 
-/** אריחי OpenStreetMap — הגוון הכהה של Waze נעשה ב-CSS (nav.css) */
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+/** מפת בסיס כהה ונקייה (Esri Dark Gray): רקע כהה, כבישים בהירים ושמות רחובות — הגוון הכחלחל של Waze נעשה ב-CSS (nav.css) */
+const TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 const FOLLOW_ZOOM = 17;
 
 /** בנסיעה — המפה עוקבת אחרי הרכב מקרוב, והרכב בשליש התחתון; לפני היציאה — המסלול כולו; אחרי ההגעה — הזירה */
@@ -125,7 +125,7 @@ function Camera({ mode, pos, bounds }: { mode: 'follow' | 'overview' | 'scene'; 
     else {
       // המסלול צריך להיכנס לחלק שנראה: מעל מרכז המשטח, ולא רחב מדי
       const { x, y } = map.getSize();
-      map.fitBounds(bounds, { paddingTopLeft: [x / 2 - 420, y / 2 - 760], paddingBottomRight: [x / 2 - 420, y / 2 - 40], maxZoom: 16, animate: false });
+      map.fitBounds(bounds, { paddingTopLeft: [x / 2 - 230, y / 2 - 520], paddingBottomRight: [x / 2 - 230, y / 2 - 30], maxZoom: 16, animate: false });
     }
   }, [mode, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
@@ -188,11 +188,23 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
 
   return (
     <section className="mdt-nav waze">
-      {/* המפה כמעט שטוחה, עם הטיה קלה לאחור — גדולה מהמסגרת כדי למלא אותה גם בסיבוב */}
+      {/* המפה מוטה מעט לאחור — גדולה מהמסגרת כדי למלא אותה גם בסיבוב */}
       <div className="mdt-nav-tilt">
        <div className="mdt-nav-spin" style={{ transform: `rotate(${spin.current}deg)`, '--unspin': `${-spin.current}deg` } as React.CSSProperties}>
-        <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={14} zoomControl={false} attributionControl={false}>
-          <TileLayer url={TILES} maxZoom={19} />
+        <MapContainer
+          center={[inc.pos.lat, inc.pos.lng]}
+          zoom={14}
+          zoomControl={false}
+          attributionControl={false}
+          // המפה לתצוגה בלבד: בלי גרירה, זום או פוקוס מקלדת. פוקוס על המפה גרם לדפדפן לגלול את המסגרת, והתצוגה נחתכה
+          keyboard={false}
+          dragging={false}
+          scrollWheelZoom={false}
+          doubleClickZoom={false}
+          touchZoom={false}
+          boxZoom={false}
+        >
+          <TileLayer url={TILES} maxZoom={19} maxNativeZoom={16} />
           <Camera mode={driving ? 'follow' : arrived ? 'scene' : 'overview'} pos={me.pos} bounds={bounds} />
           {!arrived && (
             <>
