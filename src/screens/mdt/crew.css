@@ -1,0 +1,50 @@
+/* ═══ צוות ברכב — גרירת כוח אדם וסימון מפקדי צוות (משלים את כללי mdt-crew / mdt-person שב-mdt.css) ═══ */
+
+/* פריטים נגררים: גלילה אנכית נשארת של הדפדפן, כל השאר (החלקה אופקית, לחיצה ארוכה) — שלנו */
+.mdt-crew .mdt-row.crew,
+.mdt-crew .mdt-person {
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+.mdt-crew .mdt-person { position: relative; cursor: grab; }
+.mdt-crew .mdt-row.crew.dragging,
+.mdt-crew .mdt-person.dragging { opacity: 0.35; cursor: grabbing; }
+
+/* אריח "כבוי" כשהרכב מלא — במקום disabled, כדי שעדיין אפשר יהיה לגרור ולקבל משוב */
+.mdt-crew .mdt-person.off { opacity: 0.45; cursor: not-allowed; }
+.mdt-crew .mdt-person.off:hover { border-color: var(--mdt-line); }
+.mdt-crew .mdt-person.off:active { transform: none; }
+.mdt-crew .mdt-person.off.dragging { opacity: 0.25; }
+
+/* תג מפק״צ על אריח של מי שמוגדר כמפקד צוות */
+.mdt-cmd-badge {
+  position: absolute; top: 6px; inset-inline-start: 6px; display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px 1px 4px; border-radius: 999px;
+  background: #2e2418; border: 1px solid color-mix(in srgb, var(--mdt-amber) 55%, transparent); color: var(--mdt-amber); font-size: 11px; font-weight: 700; line-height: 1.5; pointer-events: none;
+}
+
+/* ── יעדי שחרור ── */
+.mdt-crew .mdt-panel { transition: border-color 0.12s, box-shadow 0.12s, background 0.12s; }
+.mdt-crew .mdt-panel.drop-zone { border-style: dashed; border-color: color-mix(in srgb, var(--mdt-amber) 55%, var(--mdt-line)); }
+.mdt-crew .mdt-panel.drop-ok {
+  border-style: solid; border-color: var(--mdt-amber); background: color-mix(in srgb, var(--mdt-amber) 7%, var(--mdt-panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mdt-amber) 55%, transparent), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+.mdt-crew .mdt-panel.drop-bad {
+  border-style: solid; border-color: var(--mdt-bad); background: color-mix(in srgb, var(--mdt-bad) 7%, var(--mdt-panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mdt-bad) 50%, transparent), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+.mdt-crew-full { color: var(--mdt-bad); font-weight: 700; }
+
+/* ── ה"רוח" שעוקבת אחרי המצביע — מצוירת ב-body, מחוץ ל-transform: scale של המכשיר ── */
+.mdt-drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 10000; pointer-events: none; transform-origin: center; will-change: transform;
+  display: inline-flex; align-items: center; gap: 12px; padding: 8px 18px 8px 14px; white-space: nowrap;
+  background: var(--mdt-card-2); color: var(--mdt-text); border: 2px solid var(--mdt-steel); border-radius: 12px; font-size: 19px; font-weight: 600;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
+}
+.mdt-drag-ghost.ok { border-color: var(--mdt-amber); }
+.mdt-drag-ghost.bad { border-color: var(--mdt-bad); opacity: 0.8; }
+
+/* ── מפקד צוות שגם נוהג: שני סמלים ושתי שורות תפקיד ── */
+.mdt-crew-ic.two { grid-auto-flow: column; gap: 2px; }
+.mdt-crew-ic.two svg { width: 34px; height: 34px; }
+.mdt-crew-role.two { font-size: 16px; line-height: 1.25; text-align: center; padding: 0 6px; }

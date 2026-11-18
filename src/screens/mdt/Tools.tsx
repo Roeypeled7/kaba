@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { fmtHM } from '../../components/ui';
 import { useLocal, type Ctx } from './shared';
 
-type Tab = 'ba' | 'water' | 'phones';
+type Tab = 'ba' | 'water';
 const TABS: [Tab, string][] = [
   ['ba', 'בקרת נשימה'],
   ['water', 'מחשבון מים וקצף'],
-  ['phones', 'טלפונים חיוניים'],
 ];
 
 export default function Tools(ctx: Ctx) {
@@ -20,7 +19,7 @@ export default function Tools(ctx: Ctx) {
           </button>
         ))}
       </div>
-      {tab === 'ba' ? <BreathingControl {...ctx} /> : tab === 'water' ? <Water {...ctx} /> : <Phones />}
+      {tab === 'ba' ? <BreathingControl {...ctx} /> : <Water {...ctx} />}
     </div>
   );
 }
@@ -196,32 +195,5 @@ function Water({ v }: Ctx) {
         </div>
       </section>
     </div>
-  );
-}
-
-/* ── טלפונים ── */
-
-const PHONES: [string, string][] = [
-  ['כבאות והצלה', '102'],
-  ['מד״א', '101'],
-  ['משטרה', '100'],
-  ['חברת החשמל — תקלות', '103'],
-  ['מוקד עירוני', '106'],
-  ['מוקד חומ״ס מחוזי (הדמיה)', '*4400'],
-  ['משל״ט מחוזי (הדמיה)', '*4410'],
-];
-
-function Phones() {
-  return (
-    <section className="mdt-panel grow">
-      <div className="mdt-scroll mdt-rows">
-        {PHONES.map(([n, p]) => (
-          <div key={n} className="mdt-row phone">
-            <span className="grow">{n}</span>
-            <b className="mono">{p}</b>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

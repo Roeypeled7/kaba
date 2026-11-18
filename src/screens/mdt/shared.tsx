@@ -17,7 +17,7 @@ export interface Ctx {
 
 export const DAY = 86_400_000;
 
-/** מצב מקומי של הטאבלט (בדיקות, צימודים) — נשמר בדפדפן, ועובד גם כשהאחסון חסום */
+/** מצב מקומי של הטאבלט (בדיקות, בקרת נשימה) — נשמר בדפדפן, ועובד גם כשהאחסון חסום */
 export function useLocal<T>(key: string, init: () => T): [T, (next: T | ((prev: T) => T)) => void] {
   const [val, setVal] = useState<T>(() => {
     try {

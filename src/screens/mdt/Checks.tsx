@@ -3,17 +3,19 @@ import type { UnitType, Vehicle } from '../../engine/model';
 import { IcClipboard, IcTools, IcToolsCal } from './icons';
 import { DAY, fmtDate, useLocal, type Ctx } from './shared';
 
-type Kind = 'daily' | 'weekly' | 'semi';
+type Kind = 'daily' | 'weekly';
 
 export const CHECK_TITLE: Record<string, string> = {
   daily: 'בדיקה יומית',
-  weekly: 'בדיקה שבועית',
-  semi: 'בדיקה חצי שנתית',
+  weekly: 'טיפול שבועי',
   faults: 'תקלות פתוחות',
 };
 
 /** תדירות בימים */
-const EVERY: Record<Kind, number> = { daily: 1, weekly: 7, semi: 182 };
+const EVERY: Record<Kind, number> = { daily: 1, weekly: 7 };
+
+/** "בדיקה" בנקבה, "טיפול" בזכר */
+const DONE: Record<Kind, string> = { daily: 'בוצעה', weekly: 'בוצע' };
 
 interface Item {
   text: string;
@@ -54,16 +56,6 @@ const ITEMS: Record<Kind, Item[]> = {
     { text: 'מנוף — הרמה מלאה וייצוב', critical: true, only: ['ladder'] },
     { text: 'ניקוי תא הנהג והטאבלט' },
   ],
-  semi: [
-    { text: 'טיפול משאבה — שמן ואטמים', critical: true, only: WATER },
-    { text: 'בדיקת לחץ לזרנוקים', only: WATER },
-    { text: 'כיול גלאי גזים' },
-    { text: 'מערכת קצף — יחס ערבוב', only: WATER },
-    { text: 'בלמים — בדיקת מוסך', critical: true },
-    { text: 'ציוד חילוץ הידראולי — טיפול', only: ['engine'] },
-    { text: 'כריות הרמה — בדיקת לחץ', only: ['engine'] },
-    { text: 'החלפת מסננים — אוויר ודלק' },
-  ],
 };
 
 const itemsFor = (kind: Kind, v: Vehicle) => ITEMS[kind].filter((i) => !i.only || i.only.includes(v.type));
@@ -74,6 +66,7 @@ export interface Fault {
   critical: boolean;
   t: number;
   by: string;
+  /** באחסון ישן יכול להופיע גם מקור שכבר לא קיים (הבדיקה החצי-שנתית שהוסרה) */
   source: Kind | 'manual';
   closedAt?: number;
 }
@@ -83,7 +76,7 @@ interface ChecksData {
   faults: Fault[];
 }
 
-/** ערך התחלתי: שבועית באיחור, חצי-שנתית בתוקף, כמה תקלות פתוחות */
+/** ערך התחלתי: טיפול שבועי באיחור וכמה תקלות פתוחות */
 function seed(v: Vehicle, now: number): ChecksData {
   const seeded: [string, boolean][] =
     v.type === 'commander'
@@ -95,7 +88,7 @@ function seed(v: Vehicle, now: number): ChecksData {
           ['מושב נהג — מנגנון כיוון תקוע', false],
         ];
   return {
-    last: { weekly: { t: now - 64 * DAY, by: 'משמרת קודמת' }, semi: { t: now - 99 * DAY, by: 'מוסך מחוזי' } },
+    last: { weekly: { t: now - 64 * DAY, by: 'משמרת קודמת' } },
     faults: seeded.map(([text, critical], i) => ({ id: `F${i + 1}`, text, critical, t: now - (i + 2) * 3 * DAY, by: 'משמרת קודמת', source: 'manual' })),
   };
 }
@@ -122,13 +115,13 @@ export const openFaults = (data: ChecksData) => data.faults.filter((f) => !f.clo
 
 /** תג על אריח "בדיקות רכב" במסך הבית */
 export function checksBadge(data: ChecksData, now: number): { n: string; c: string } | null {
-  const late = (['weekly', 'semi'] as const).filter((k) => daysLeft(data, k, now) < 0).length + (doneToday(data, now) ? 0 : 1);
+  const late = (daysLeft(data, 'weekly', now) < 0 ? 1 : 0) + (doneToday(data, now) ? 0 : 1);
   return late ? { n: String(late), c: 'red' } : null;
 }
 
 export default function Checks(ctx: Ctx) {
   const kind = ctx.segs[1];
-  if (kind === 'daily' || kind === 'weekly' || kind === 'semi') return <Checklist ctx={ctx} kind={kind} />;
+  if (kind === 'daily' || kind === 'weekly') return <Checklist ctx={ctx} kind={kind} />;
   if (kind === 'faults') return <Faults {...ctx} />;
   return <ChecksHome {...ctx} />;
 }
@@ -139,14 +132,13 @@ function ChecksHome({ v, state, go }: Ctx) {
   const badge = (n: number) => <span className={`mdt-badge ${n <= 0 ? 'red' : 'steel'}`}>{n}</span>;
   const faults = openFaults(data).length;
   const tiles = [
-    { k: 'daily', c: '#ffb020', ic: <IcTools size={64} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
-    { k: 'weekly', c: '#c9d3de', ic: <IcToolsCal size={64} star />, b: badge(daysLeft(data, 'weekly', now)) },
-    { k: 'semi', c: '#c9d3de', ic: <IcToolsCal size={64} />, b: badge(daysLeft(data, 'semi', now)) },
-    { k: 'faults', c: '#ff3d2e', ic: <IcClipboard size={64} />, b: faults ? <span className="mdt-badge red">{faults}</span> : null },
+    { k: 'daily', c: '#ffb020', ic: <IcTools size={72} />, b: doneToday(data, now) ? null : <span className="mdt-badge red">!</span> },
+    { k: 'weekly', c: '#c9d3de', ic: <IcToolsCal size={72} star />, b: badge(daysLeft(data, 'weekly', now)) },
+    { k: 'faults', c: '#ff3d2e', ic: <IcClipboard size={72} />, b: faults ? <span className="mdt-badge red">{faults}</span> : null },
   ];
   return (
     <div className="mdt-page">
-      <div className="mdt-tiles big">
+      <div className="mdt-tiles row">
         {tiles.map((t) => (
           <button key={t.k} className="mdt-tile" style={{ '--tc': t.c } as React.CSSProperties} onClick={() => go(`checks/${t.k}`)}>
             {t.b}
@@ -156,9 +148,9 @@ function ChecksHome({ v, state, go }: Ctx) {
         ))}
       </div>
       <div className="mdt-checks-meta">
-        {(['daily', 'weekly', 'semi'] as const).map((k) => (
+        {(['daily', 'weekly'] as const).map((k) => (
           <span key={k}>
-            {CHECK_TITLE[k]}: {data.last[k] ? `${fmtDate(data.last[k]!.t)} · ${data.last[k]!.by}` : 'לא בוצעה'}
+            {CHECK_TITLE[k]}: {data.last[k] ? `${fmtDate(data.last[k]!.t)} · ${data.last[k]!.by}` : `לא ${DONE[k]}`}
           </span>
         ))}
       </div>
@@ -191,7 +183,7 @@ function Checklist({ ctx, kind }: { ctx: Ctx; kind: Kind }) {
       <section className="mdt-panel grow">
         <div className="mdt-panel-h">
           {CHECK_TITLE[kind]} · {v.callsign}
-          <span className="mdt-panel-sub">בוצעה לאחרונה: {data.last[kind] ? fmtDate(data.last[kind]!.t) : '—'}</span>
+          <span className="mdt-panel-sub">{DONE[kind]} לאחרונה: {data.last[kind] ? fmtDate(data.last[kind]!.t) : '—'}</span>
         </div>
         <div className="mdt-scroll mdt-check-list">
           {items.map((it, i) => {
@@ -283,7 +275,7 @@ function Faults({ v, state, send }: Ctx) {
                 <b>{f.text}</b>
                 <span className="mdt-row-sub">
                   נפתחה {fmtDate(f.t)} · {f.by}
-                  {f.source !== 'manual' && ` · מ${CHECK_TITLE[f.source]}`}
+                  {f.source in ITEMS && ` · מ${CHECK_TITLE[f.source]}`}
                   {f.closedAt && ` · נסגרה ${fmtDate(f.closedAt)}`}
                 </span>
               </span>

@@ -103,11 +103,13 @@
 .mdt-hint { margin: 0; color: var(--mdt-dim); font-size: 15px; }
 
 /* ── אריחים ── */
-.mdt-tiles { display: grid; grid-template-columns: repeat(4, 196px); gap: 22px 26px; justify-content: center; margin-top: 46px; }
-.mdt-tiles.big { grid-template-columns: repeat(4, 208px); gap: 34px; margin-top: 120px; }
-.mdt-tiles.big .mdt-tile { height: 206px; }
+/* מסך הבית: שישה אריחים, 3×2, ממורכזים בגובה וברוחב המסך */
+.mdt-tiles { display: grid; grid-template-columns: repeat(3, 268px); gap: 28px 32px; justify-content: center; margin-block: auto; }
+/* שורה אחת של אריחים גבוהים (בדיקות רכב) */
+.mdt-tiles.row { gap: 36px; }
+.mdt-tiles.row .mdt-tile { height: 244px; }
 .mdt-tile {
-  position: relative; height: 168px; border: 1px solid var(--mdt-line); border-radius: 18px; color: #fff; display: flex; flex-direction: column; overflow: hidden;
+  position: relative; height: 216px; border: 1px solid var(--mdt-line); border-radius: 18px; color: #fff; display: flex; flex-direction: column; overflow: hidden;
   background: linear-gradient(165deg, var(--mdt-card-2), var(--mdt-panel));
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: transform 0.08s, border-color 0.15s;
@@ -116,7 +118,7 @@
 .mdt-tile:hover { border-color: color-mix(in srgb, var(--tc) 60%, var(--mdt-line)); }
 .mdt-tile:active { transform: scale(0.97); }
 .mdt-tile-ic { flex: 1; display: grid; place-items: center; color: var(--tc); z-index: 1; }
-.mdt-tile-lbl { z-index: 1; margin: 0 14px; padding: 9px 0 13px; font-weight: 700; font-size: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.mdt-tile-lbl { z-index: 1; margin: 0 14px; padding: 11px 0 15px; font-weight: 700; font-size: 19px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .mdt-badge {
   position: absolute; top: 12px; left: 12px; min-width: 38px; height: 38px; padding: 0 6px; border-radius: 19px; z-index: 2;
   display: grid; place-items: center; font: 700 15px 'Heebo', sans-serif; color: #fff; border: 2px solid var(--mdt-bg); direction: ltr;
@@ -127,7 +129,8 @@
 .mdt-ic-combo { position: relative; display: inline-block; }
 .mdt-ic-mini { position: absolute; bottom: 2px; left: -14px; color: var(--tc); }
 .mdt-ic-mini b { position: absolute; inset: 0; display: grid; place-items: center; padding-top: 6px; font-size: 9px; color: var(--mdt-panel); }
-.mdt-checks-meta { margin-top: auto; display: flex; justify-content: center; gap: 28px; color: var(--mdt-dim); font-size: 14px; }
+/* האריחים ממורכזים בשטח שמעל השורה הזו */
+.mdt-checks-meta { display: flex; justify-content: center; gap: 28px; color: var(--mdt-dim); font-size: 14px; }
 
 /* ── פאנלים ── */
 .mdt-panel {
@@ -233,20 +236,6 @@
 .mdt-person:hover:not(:disabled) { border-color: var(--mdt-amber); }
 .mdt-person:disabled { opacity: 0.45; }
 .mdt-person:active:not(:disabled) { transform: scale(0.97); }
-.mdt-radios { display: grid; grid-template-columns: 1fr 470px; grid-template-rows: 1fr auto; gap: 16px 18px; }
-.mdt-radios .crew-in { grid-column: 1; grid-row: 1; }
-.mdt-radios .crew-pool { grid-column: 2; grid-row: 1 / span 2; }
-.mdt-pair { width: 150px; align-self: stretch; display: grid; place-items: center; border-inline-start: 1px solid var(--mdt-line); font-weight: 700; color: var(--mdt-dim); }
-.mdt-pair.on { color: var(--mdt-amber); }
-.mdt-person.dev { height: 170px; }
-.mdt-person.dev svg { color: var(--mdt-steel); }
-.mdt-person.dev.taken { border-color: var(--mdt-amber); background: #2e2418; }
-.mdt-batt { position: relative; width: 70%; height: 14px; background: var(--mdt-line); border-radius: 3px; overflow: hidden; margin: 3px 0; }
-.mdt-batt i { position: absolute; inset: 0 auto 0 0; background: var(--mdt-ok); }
-.mdt-batt.low i { background: var(--mdt-amber); }
-.mdt-batt em { position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; font-style: normal; font-weight: 700; color: #fff; text-shadow: 0 0 2px #000; }
-.mdt-vradio { display: flex; align-items: center; gap: 12px; margin: 10px 14px 0; padding: 10px 12px; background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px; }
-.mdt-vradio-ic { color: var(--mdt-steel); }
 
 /* ── מודאל ── */
 .mdt-modal-wrap { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; z-index: 30; }
@@ -271,19 +260,6 @@
 .mdt-drawer-f { margin-top: auto; padding: 0 20px; font-size: 12px; color: var(--mdt-dim); }
 
 /* ── הזנקה ── */
-.mdt-alarm {
-  position: absolute; top: 0; right: 0; left: 0; z-index: 1400; color: #fff; display: flex; align-items: center; gap: 22px;
-  background: #b71c1c; animation: mdt-flash 0.9s steps(2) infinite; padding: 14px 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-@keyframes mdt-flash { 50% { background: #7f0f0f; } }
-.mdt-alarm-word { font-size: 58px; font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.3); flex: none; }
-.mdt-alarm-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.mdt-alarm-type { font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
-.mdt-alarm-addr { font-size: 22px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mdt-alarm-units { display: flex; flex-wrap: wrap; gap: 6px; }
-.mdt-alarm-units span { background: rgba(0, 0, 0, 0.3); padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 15px; }
-.mdt-alarm-units span.me { background: #fff; color: #b71c1c; }
-.mdt-alarm .mdt-btn { flex: none; font-size: 24px; padding: 18px 36px; color: #b71c1c; }
 .mdt-sev { font-size: 15px; font-weight: 800; padding: 3px 12px; border-radius: 20px; color: #111; }
 .mdt-sev.s1 { background: var(--mdt-steel); }
 .mdt-sev.s2 { background: var(--mdt-amber); }
@@ -293,25 +269,22 @@
 .mdt-idle { align-items: center; justify-content: center; gap: 18px; text-align: center; font-size: 20px; }
 .mdt-idle p { margin: 0; color: var(--mdt-dim); }
 .mdt-idle-st { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 22px; }
-.mdt-inc-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px 4px; font-size: 16px; }
+.mdt-inc-head { display: flex; align-items: center; gap: 12px; font-size: 16px; }
 .mdt-inc-type { font-size: 26px; font-weight: 800; }
-.mdt-inc-addr { padding: 2px 18px; font-size: 28px; font-weight: 800; color: var(--mdt-amber); }
-.mdt-inc-notes { padding: 2px 18px; font-size: 17px; color: #ddd; }
-.mdt-inc-caller { padding: 2px 18px 8px; font-size: 14px; color: var(--mdt-dim); }
-.mdt-steps { list-style: none; display: flex; margin: 6px 18px; padding: 0; }
-.mdt-steps li { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; color: var(--mdt-dim); position: relative; }
-.mdt-steps li::before { content: ''; position: absolute; top: 15px; left: 50%; width: 100%; height: 3px; background: var(--mdt-line); z-index: 0; }
-.mdt-steps li:first-child::before { display: none; }
-.mdt-steps li i { width: 32px; height: 32px; border-radius: 50%; background: var(--mdt-line); display: grid; place-items: center; font-style: normal; font-weight: 800; z-index: 1; }
-.mdt-steps li.done { color: #ddd; }
-.mdt-steps li.done i, .mdt-steps li.done::before, .mdt-steps li.now::before { background: var(--mdt-amber); color: #1a1200; }
-.mdt-steps li.now { color: #fff; font-weight: 800; }
-.mdt-steps li.now i { background: var(--mdt-fire); color: #fff; box-shadow: 0 0 0 4px rgba(255, 61, 46, 0.35); }
-.mdt-act-row { display: flex; align-items: center; gap: 20px; padding: 10px 18px; }
+.mdt-inc-meta { margin-inline-start: auto; display: flex; align-items: baseline; gap: 12px; font-size: 18px; font-weight: 700; flex: none; }
+.mdt-inc-addr { margin-top: 6px; font-size: 28px; font-weight: 800; line-height: 1.2; color: var(--mdt-amber); }
+/* דף פרטי האירוע: עמודת תוויות צרה ועמודת ערכים */
+.mdt-inc-sheet {
+  display: grid; grid-template-columns: max-content 1fr; margin: 14px 0 0; padding: 2px 14px;
+  background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px;
+}
+.mdt-inc-sheet dt, .mdt-inc-sheet dd { margin: 0; padding: 9px 0; border-top: 1px solid var(--mdt-line); }
+.mdt-inc-sheet dt { padding-inline-end: 18px; font-size: 13px; font-weight: 700; color: var(--mdt-dim); line-height: 24px; }
+.mdt-inc-sheet dd { font-size: 17px; line-height: 24px; min-width: 0; overflow-wrap: anywhere; }
+.mdt-inc-sheet dt:first-of-type, .mdt-inc-sheet dt:first-of-type + dd { border-top: 0; }
+.mdt-inc-tel { color: inherit; text-decoration: none; direction: ltr; unicode-bidi: isolate; }
 .mdt-eta { font-size: 18px; color: #ccc; }
 .mdt-eta b { font-size: 26px; color: #fff; }
-.mdt-quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px; }
-.mdt-quick .mdt-btn { background: var(--mdt-card); }
 .mdt-log { font-size: 14px; display: flex; flex-direction: column; gap: 4px; color: #ddd; }
 .mdt-log.light { color: var(--mdt-dim); padding: 8px 0 2px; }
 .mdt-map { height: 330px; flex: none; margin: 4px 12px 0; border-radius: 10px; overflow: hidden; background: #e8e6e1; border: 1px solid var(--mdt-line); }
@@ -322,7 +295,6 @@
 .mdt-forces > div.me { outline: 2px solid var(--mdt-amber); }
 .mdt-feed { font-size: 14px; display: flex; flex-direction: column; gap: 6px; color: #ddd; }
 .mdt-feed .me { color: var(--mdt-amber); }
-.mdt-feed.mini { padding: 8px 14px 0; gap: 3px; font-size: 13px; flex: none; }
 .mdt-row.hist { flex-direction: column; align-items: stretch; cursor: pointer; justify-content: center; }
 .mdt-hist-top { display: flex; align-items: center; gap: 14px; }
 .mdt-inc-st { font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 12px; background: var(--mdt-line); }
@@ -396,7 +368,8 @@
 .mdt-gate-st { font-size: 20px; font-weight: 800; }
 .mdt-gate.open .mdt-gate-st { color: var(--mdt-steel); }
 .mdt-gate.opening .mdt-gate-st, .mdt-gate.closing .mdt-gate-st { color: var(--mdt-amber); }
-.mdt-gate-btns { display: flex; gap: 14px; }
+.mdt-gate-btns { display: flex; gap: 14px; align-self: stretch; }
+.mdt-gate-btns .mdt-btn { flex: 1; }
 
 /* ── כלי עזר ── */
 .mdt-form { display: flex; flex-direction: column; gap: 16px; padding: 4px 18px; }
@@ -417,13 +390,24 @@
 .mdt-big-num { text-align: center; display: flex; flex-direction: column; }
 .mdt-big-num b { font-size: 120px; color: var(--mdt-amber); line-height: 1; }
 .mdt-big-num span { font-size: 20px; color: var(--mdt-dim); }
-.mdt-row.phone { font-size: 20px; }
-.mdt-row.phone b { font-size: 24px; color: var(--mdt-amber); }
 
 /* ── מסך אירוע מפוצל: ימין פרטים ועדכונים, שמאל ניווט ── */
 .mdt-nav-split { display: flex; gap: 14px; flex: 1; min-height: 0; position: relative; }
 .mdt-details { width: 560px; flex: none; padding: 0; }
-.mdt-details-scroll { padding-bottom: 12px; }
+/* כל תוכן הפאנל יושב על אותם שוליים — 18px מכל צד */
+.mdt-details-scroll { padding: 16px 18px 18px; }
+.mdt-sec-h {
+  display: flex; align-items: center; margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--mdt-line);
+  font-size: 14px; font-weight: 800; color: var(--mdt-dim);
+}
+.mdt-details .mdt-updates { padding: 0; }
+.mdt-details .mdt-empty { padding: 10px 0; }
+/* הכפתור הראשי: מחוץ לגלילה, לכל רוחב הפאנל */
+.mdt-details-foot {
+  flex: none; position: relative; z-index: 1; padding: 12px 18px 14px; background: var(--mdt-bg-2);
+  border-top: 1px solid var(--mdt-line); border-radius: 0 0 13px 13px; box-shadow: 0 -8px 16px rgba(0, 0, 0, 0.3); clip-path: inset(-24px 0 0 0 round 0 0 13px 13px);
+}
+.mdt-details-foot .mdt-btn { display: block; width: 100%; min-height: 76px; padding: 10px 18px; font-size: 28px; font-weight: 800; }
 .mdt-count { background: var(--mdt-fire); color: #fff; border-radius: 10px; padding: 0 8px; font-size: 12px; margin-inline-start: 6px; }
 .mdt-updates { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
 .mdt-update { background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px; padding: 10px 12px; font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
@@ -472,3 +456,6 @@
 @keyframes mdt-vid { to { width: 100%; } }
 .mdt-lightbox-cap { color: #fff; font-size: 17px; text-align: center; }
 .mdt-lightbox-cap .mono { color: var(--mdt-dim); }
+
+/* מפת Waze חיה במסך האירוע */
+.mdt-waze { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }

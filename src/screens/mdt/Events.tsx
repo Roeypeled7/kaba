@@ -1,26 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import { MapContainer, Marker, Polyline, useMap } from 'react-leaflet';
 import { AMB_STATUS_LABEL, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
 import { distKm } from '../../engine/dispatch';
 import { etaMin } from '../../engine/simulation';
-import type { Incident, IncidentUpdate, LatLng, Vehicle } from '../../engine/model';
-import { DarkTiles, incidentIcon, stationIcon, vehicleIcon } from '../../components/mapkit';
+import type { Incident, IncidentUpdate, Vehicle } from '../../engine/model';
 import { SceneMedia } from '../../components/scene';
 import { VEHICLE_ACTIONS, fmtElapsed, fmtHM, stationShort } from '../../components/ui';
 import { playPing } from '../../sound';
 import { fmtDate, unitFeed, type Ctx } from './shared';
 
-const STEPS: [Vehicle['status'], string][] = [
-  ['dispatched', 'הוזנק'],
-  ['enroute', 'בדרך'],
-  ['onscene', 'בזירה'],
-  ['cleared', 'פנוי בזירה'],
-  ['returning', 'חוזר'],
-  ['available', 'בתחנה'],
-];
-
-const QUICK = ['האש בשליטה', 'נדרשת תגבורת', 'יש נפגעים בזירה', 'מבקשים חסימת משטרה', 'מבקשים חברת חשמל לניתוק'];
+/** תוויות הכפתור הראשי בטאבלט — קצרות יותר מבמסך התחנה; הפעולה עצמה נשארת של VEHICLE_ACTIONS */
+const TABLET_LABEL: Partial<Record<Vehicle['status'], string>> = {
+  dispatched: 'יצאנו',
+  enroute: 'במקום',
+  onscene: 'אירוע הסתיים',
+  cleared: 'חוזרים לתחנה',
+  returning: 'בתחנה',
+};
 
 export default function Events(ctx: Ctx) {
   const { state, v } = ctx;
@@ -45,7 +40,7 @@ export default function Events(ctx: Ctx) {
 function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
   const { state, send, v, st } = ctx;
   const act = VEHICLE_ACTIONS[v.status];
-  const stepIdx = STEPS.findIndex(([s]) => s === v.status);
+  const actLabel = TABLET_LABEL[v.status] ?? act?.label;
   const [view, setView] = useState<IncidentUpdate | null>(null);
   const fresh = useFreshUpdates(inc);
 
@@ -60,7 +55,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
           <p>{v.status === 'returning' ? 'חוזרים לתחנה.' : v.status === 'offline' ? 'הרכב לא כשיר — אין הזנקות.' : 'אין אירוע פעיל. ההזנקה הבאה תקפוץ על המסך.'}</p>
           {act && v.status !== 'available' && (
             <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
-              {act.label}
+              {actLabel}
             </button>
           )}
         </section>
@@ -90,41 +85,38 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
               {t.icon} {t.label}
             </span>
             <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
-            <span className="grow" />
-            <span className="mono dim">#{inc.id}</span>
-            <span className="mono">{fmtElapsed(state.simTime - inc.openedAt)}</span>
+            <span className="mdt-inc-meta">
+              <span className="mono dim">#{inc.id}</span>
+              <span className="mono">{fmtElapsed(state.simTime - inc.openedAt)}</span>
+            </span>
           </div>
           <div className="mdt-inc-addr">📍 {inc.address}</div>
-          {inc.notes && <div className="mdt-inc-notes">“{inc.notes}”</div>}
-          <div className="mdt-inc-caller">
-            מדווח: {inc.caller} · <span className="mono">{inc.phone}</span> · {INCIDENT_STATUS_LABEL[inc.status]}
-          </div>
 
-          <ol className="mdt-steps">
-            {STEPS.map(([s, label], i) => (
-              <li key={s} className={i < stepIdx ? 'done' : i === stepIdx ? 'now' : ''}>
-                <i>{i < stepIdx ? '✓' : i + 1}</i>
-                {label}
-              </li>
-            ))}
-          </ol>
-
-          <div className="mdt-act-row">
-            {act && (
-              <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
-                {act.label}
-              </button>
+          {/* דף פרטים: תווית מימין, ערך משמאל */}
+          <dl className="mdt-inc-sheet">
+            {inc.notes && (
+              <>
+                <dt>תיאור</dt>
+                <dd>{inc.notes}</dd>
+              </>
             )}
-          </div>
-          <div className="mdt-quick">
-            {QUICK.map((q) => (
-              <button key={q} className="mdt-btn sm" onClick={() => send({ type: 'unitRadio', vehicleId: v.id, text: q })}>
-                📻 {q}
-              </button>
-            ))}
-          </div>
+            <dt>מדווח</dt>
+            <dd>{inc.caller}</dd>
+            <dt>טלפון</dt>
+            <dd>
+              <a className="mono mdt-inc-tel" href={`tel:${inc.phone}`}>
+                {inc.phone}
+              </a>
+            </dd>
+            <dt>סטטוס</dt>
+            <dd>
+              <span className={`mdt-inc-st i-${inc.status}`}>{INCIDENT_STATUS_LABEL[inc.status]}</span>
+            </dd>
+            <dt>נפתח</dt>
+            <dd className="mono">{fmtHM(inc.openedAt)}</dd>
+          </dl>
 
-          <div className="mdt-panel-h small">
+          <div className="mdt-sec-h">
             עדכונים מהזירה <span className="mdt-count">{inc.updates.length}</span>
           </div>
           <div className="mdt-updates">
@@ -147,7 +139,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
             ))}
           </div>
 
-          <div className="mdt-panel-h small">כוחות באירוע</div>
+          <div className="mdt-sec-h">כוחות באירוע</div>
           <div className="mdt-forces">
             {others.map((x) => (
               <div key={x.id}>
@@ -170,7 +162,7 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
             {!others.length && !ambs.length && !inc.policeNotified && <div className="mdt-empty">רק הרכב שלכם באירוע</div>}
           </div>
 
-          <div className="mdt-panel-h small">יומן אירוע</div>
+          <div className="mdt-sec-h">יומן אירוע</div>
           <div className="mdt-log">
             {[...inc.log].reverse().map((l, i) => (
               <div key={i}>
@@ -179,22 +171,27 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
             ))}
           </div>
         </div>
+
+        {/* הכפתור הראשי — קבוע בתחתית הפאנל, תמיד מול העיניים */}
+        {act && (
+          <div className="mdt-details-foot">
+            <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
+              {actLabel}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* שמאל: ניווט */}
       <section className="mdt-nav">
-        <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={13} zoomControl={false} attributionControl={false}>
-          <DarkTiles />
-          <FitBoth a={v.pos} b={inc.pos} id={inc.id} />
-          <Marker position={[st.pos.lat, st.pos.lng]} icon={stationIcon(st, stationShort(st))} />
-          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#1b6fa8', weight: 13, opacity: 0.9 }} />
-          <Polyline positions={[[v.pos.lat, v.pos.lng], [inc.pos.lat, inc.pos.lng]]} pathOptions={{ color: '#33ccff', weight: 8 }} />
-          <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
-          {others.map((x) => (
-            <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
-          ))}
-          <Marker position={[v.pos.lat, v.pos.lng]} icon={vehicleIcon(v)} zIndexOffset={500} />
-        </MapContainer>
+        {/* מפת Waze חיה (עומסים ודיווחים בזמן אמת) ממורכזת על הזירה. ניווט קולי מלא נפתח באפליקציית Waze מהכפתור למעלה */}
+        <iframe
+          className="mdt-waze"
+          title="Waze"
+          src={`https://embed.waze.com/iframe?zoom=15&lat=${inc.pos.lat}&lon=${inc.pos.lng}&pin=1&desc=1`}
+          allow="geolocation"
+          allowFullScreen
+        />
         <div className="mdt-nav-top">
           <span className="mdt-nav-arrow">{driving ? '⬆' : '📍'}</span>
           <div>
@@ -269,15 +266,6 @@ function useFreshUpdates(inc: Incident | undefined) {
     return () => clearTimeout(tm);
   }, [inc?.id, ids.length]); // eslint-disable-line react-hooks/exhaustive-deps
   return fresh;
-}
-
-/** מתאים את התצוגה כך שהרכב והאירוע ייראו יחד */
-function FitBoth({ a, b, id }: { a: LatLng; b: LatLng; id: string }) {
-  const map = useMap();
-  useEffect(() => {
-    map.fitBounds(L.latLngBounds([a.lat, a.lng], [b.lat, b.lng]), { padding: [90, 90], maxZoom: 15, animate: false });
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
-  return null;
 }
 
 function Feed({ ctx }: { ctx: Ctx }) {

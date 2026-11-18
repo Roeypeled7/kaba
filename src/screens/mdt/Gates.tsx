@@ -45,6 +45,7 @@ export default function Gates({ st, v }: Ctx) {
     return () => clearInterval(id);
   }, []);
 
+  // אין סגירה ידנית — השער נסגר לבד אחרי 45 שנ׳ (או מאריכים את הפתיחה)
   const set = (i: number, s: GateState) => setGates((gs) => gs.map((g, j) => (j === i ? { s, at: Date.now() } : g)));
   const atStation = v.status === 'available' || v.status === 'offline' || v.status === 'dispatched';
 
@@ -80,9 +81,6 @@ export default function Gates({ st, v }: Ctx) {
               <div className="mdt-gate-btns">
                 <button className="mdt-btn cyan big" disabled={g.s === 'open' || g.s === 'opening'} onClick={() => set(i, 'opening')}>
                   פתיחה
-                </button>
-                <button className="mdt-btn big" disabled={g.s === 'closed' || g.s === 'closing'} onClick={() => set(i, 'closing')}>
-                  סגירה
                 </button>
               </div>
               {g.s === 'open' && (

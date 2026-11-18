@@ -25,6 +25,8 @@ export type CrewRole = 'commander' | 'driver' | 'firefighter';
 export interface CrewMember {
   name: string;
   role: CrewRole;
+  /** מפקד צוות שגם נוהג ברכב — נשאר מפקד צוות */
+  drives?: boolean;
 }
 
 export interface Team {

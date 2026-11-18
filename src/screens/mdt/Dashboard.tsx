@@ -21,7 +21,7 @@ export default function Dashboard({ state, v, st }: Ctx) {
   const active = state.incidents.filter((i) => i.status !== 'closed');
   const engines = state.vehicles.filter((x) => x.type === 'engine');
   const enginesFree = engines.filter((x) => x.status === 'available').length;
-  const late = (['weekly', 'semi'] as const).filter((k) => daysLeft(data, k, now) < 0).length;
+  const late = daysLeft(data, 'weekly', now) < 0 ? 1 : 0;
 
   // יציאות של התחנה לפי שעה, 12 השעות האחרונות
   const buckets = Array.from({ length: SHIFT_H }, (_, i) => {

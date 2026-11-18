@@ -45,18 +45,6 @@ export const IcWrenchCheck = ({ size }: P) =>
     </>,
   );
 
-/** מכשיר קשר — צימוד מכשירי קשר */
-export const IcWalkie = ({ size }: P) =>
-  svg(
-    size,
-    <>
-      <rect x="31" y="2" width="5" height="16" rx="2.5" opacity=".55" />
-      <path d="M18 16h20a5 5 0 0 1 5 5v36a5 5 0 0 1-5 5H18a5 5 0 0 1-5-5V21a5 5 0 0 1 5-5Zm3 7v10h14V23Z" />
-      <path d="M21 38h14v3H21Zm0 6h14v3H21Zm0 6h8v3h-8Z" fill="#000" opacity=".4" />
-      <path d="M48 22a9 9 0 0 1 0 14l-2.6-2.6a5.3 5.3 0 0 0 0-8.8Zm5.4-5.4A16.5 16.5 0 0 1 53.4 42l-2.6-2.6a12.8 12.8 0 0 0 0-20.2Z" opacity=".55" />
-    </>,
-  );
-
 /** לוח סיכון — חומ״ס */
 export const IcHazard = ({ size }: P) =>
   svg(
@@ -110,7 +98,6 @@ export const IcHydrant = ({ size }: P) =>
 export const IcCalendar = IcFlame;
 export const IcCrew = IcHelmet;
 export const IcTools = IcWrenchCheck;
-export const IcRadio = IcWalkie;
 export const IcSkull = IcHazard;
 export const IcChart = IcGauge;
 export const IcGate = IcBarrier;

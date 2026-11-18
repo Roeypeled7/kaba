@@ -138,7 +138,7 @@ export default function Launcher({ state, send, shared }: { state: SimState; sen
           <div className="launch-card tablet-card">
             <div>
               <h2>המסך שבתא הנהג</h2>
-              <p>הזנקות וסטטוסים, צוות ברכב, בדיקות רכב, צימוד קשר, חומ״ס, שערים וכלי עזר. עמוד נפרד עם קישור משלו — מסונכרן לאותה הדמיה.</p>
+              <p>הזנקות וסטטוסים, צוות ברכב, בדיקות רכב, חומ״ס, שערים וכלי עזר. עמוד נפרד עם קישור משלו — מסונכרן לאותה הדמיה.</p>
             </div>
             <div className="row gap">
               <button className="btn primary" onClick={() => window.open(TABLET_URL, 'kaba-tablet', 'width=1372,height=900,left=80,top=60')}>

@@ -1,17 +1,16 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
+import { STATUS_LABEL } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
 import { BASE, TABLET_ROOT, navigate } from '../../router';
-import { audioReady, playSiren, unlockAudio, useSoundLoop } from '../../sound';
-import { IcBack, IcBarrier, IcBattery, IcFlame, IcGauge, IcHazard, IcHelmet, IcHome, IcHydrant, IcMenu, IcWalkie, IcWrenchCheck, Watermark } from './icons';
+import { audioReady, unlockAudio } from '../../sound';
+import { IcBack, IcBarrier, IcBattery, IcFlame, IcHazard, IcHelmet, IcHome, IcHydrant, IcMenu, IcWrenchCheck, Watermark } from './icons';
 import { useLocal, type Ctx, type Send } from './shared';
+import AlarmOverlay from './Alarm';
 import Events from './Events';
 import Crew from './Crew';
 import Checks, { CHECK_TITLE, useChecks, checksBadge } from './Checks';
-import Radios from './Radios';
 import Hazmat from './Hazmat';
-import Dashboard from './Dashboard';
 import Gates from './Gates';
 import Tools from './Tools';
 import './mdt.css';
@@ -22,18 +21,20 @@ const H = 800;
 const BEZEL_X = 46;
 const BEZEL_Y = 42;
 
-/** צבע האריח — שלושה צבעים בלבד: אדום-אש למבצעי, ענבר לצוות וציוד, פלדה לכלים */
+/**
+ * צבע האריח — שלושה צבעים בלבד: אדום-אש למבצעי, ענבר לצוות וציוד, פלדה לכלים.
+ * הדאשבורד מוסתר זמנית — המסך עצמו נשאר ב-./Dashboard.tsx (אייקון IcGauge). כדי להחזיר: שורה כאן + 'dashboard' ב-HOME_ORDER.
+ */
 const PAGES: Record<string, { title: string; color: string; Icon: (p: { size?: number }) => JSX.Element; Comp: (c: Ctx) => JSX.Element }> = {
   events: { title: 'אירועים', color: '#ff3d2e', Icon: IcFlame, Comp: Events },
   crew: { title: 'צוות ברכב', color: '#ffb020', Icon: IcHelmet, Comp: Crew },
   checks: { title: 'בדיקות רכב', color: '#ffb020', Icon: IcWrenchCheck, Comp: Checks },
-  radios: { title: 'צימוד מכשירי קשר', color: '#c9d3de', Icon: IcWalkie, Comp: Radios },
   hazmat: { title: 'חומ״ס', color: '#ff3d2e', Icon: IcHazard, Comp: Hazmat },
-  dashboard: { title: 'דאשבורד', color: '#c9d3de', Icon: IcGauge, Comp: Dashboard },
   gates: { title: 'פתיחת שערים', color: '#c9d3de', Icon: IcBarrier, Comp: Gates },
   tools: { title: 'כלי עזר', color: '#ffb020', Icon: IcHydrant, Comp: Tools },
 };
-const HOME_ORDER = ['events', 'crew', 'checks', 'radios', 'hazmat', 'dashboard', 'gates', 'tools'];
+/** שישה אריחים — שלושה בשורה, שתי שורות */
+const HOME_ORDER = ['events', 'crew', 'checks', 'hazmat', 'gates', 'tools'];
 
 /** מקטין/מגדיל את מסך ה-1280×800 כך שייכנס לחלון */
 function useFit(w: number, h: number, pad: number) {
@@ -70,9 +71,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
 
   // הזנקה שממתינה לאישור ושכוללת את הרכב הזה
   const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
-  // סירנת כבאית כל עוד ההזנקה לא אושרה
-  useSoundLoop(!!alarm, () => playSiren(2, 1.6), 3400);
-  // הזנקה חדשה פותחת מיד את מסך האירוע המפוצל (ניווט + פרטים); פס ההזנקה נשאר למעלה עד האישור
+  // הזנקה חדשה פותחת מיד את מסך האירוע המפוצל (ניווט + פרטים); חלון ההזנקה נשאר במרכז המסך עד האישור או היציאה
   useEffect(() => {
     if (alarm && segs[0] !== 'events') go('events');
   }, [alarm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -181,7 +180,7 @@ function Home(ctx: Ctx) {
             <button key={k} className="mdt-tile" style={{ '--tc': P.color } as React.CSSProperties} onClick={() => ctx.go(k)}>
               {badge && <span className={`mdt-badge ${badge.c}`}>{badge.n}</span>}
               <span className="mdt-tile-ic">
-                <P.Icon size={58} />
+                <P.Icon size={72} />
               </span>
               <span className="mdt-tile-lbl">{P.title}</span>
             </button>
@@ -216,42 +215,6 @@ function Picker({ state }: { state: SimState }) {
           </div>
         </section>
       ))}
-    </div>
-  );
-}
-
-function AlarmOverlay({ ctx, dispatchIds }: { ctx: Ctx; dispatchIds: string[] }) {
-  const { state, send, v } = ctx;
-  const inc = state.incidents.find((i) => i.id === v.incidentId);
-  const t = inc ? INCIDENT_TYPE[inc.typeKey] : undefined;
-  const units = inc ? state.vehicles.filter((x) => x.incidentId === inc.id) : [];
-  const ack = () => dispatchIds.forEach((id) => send({ type: 'ackDispatch', dispatchId: id }));
-  // פס מהבהב מעל המסך המפוצל — הניווט והפרטים כבר פתוחים מתחתיו
-  return (
-    <div className="mdt-alarm">
-      <div className="mdt-alarm-word">הזנקה</div>
-      <div className="mdt-alarm-info">
-        {inc && t ? (
-          <>
-            <div className="mdt-alarm-type">
-              {t.icon} {t.label} <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
-            </div>
-            <div className="mdt-alarm-addr">📍 {inc.address}</div>
-            <div className="mdt-alarm-units">
-              {units.map((x) => (
-                <span key={x.id} className={x.id === v.id ? 'me' : ''}>
-                  {x.callsign}
-                </span>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="mdt-alarm-type">הוזנקתם — פרטי האירוע מתעדכנים</div>
-        )}
-      </div>
-      <button className="mdt-btn big white" onClick={ack}>
-        ✓ קיבלתי
-      </button>
     </div>
   );
 }
