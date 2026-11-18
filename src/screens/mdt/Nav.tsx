@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, Polyline, TileLayer, useMap } from 'react-leaflet';
 import { INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
@@ -119,14 +119,13 @@ function Camera({ mode, pos, bounds }: { mode: 'follow' | 'overview' | 'scene'; 
   const map = useMap();
   const key = mode === 'follow' ? `${pos.lat.toFixed(5)},${pos.lng.toFixed(5)}` : bounds.toBBoxString();
   useEffect(() => {
-    if (mode === 'follow') {
-      const p = map.project([pos.lat, pos.lng], FOLLOW_ZOOM).subtract([0, map.getSize().y * 0.3]);
-      map.setView(map.unproject(p, FOLLOW_ZOOM), FOLLOW_ZOOM, { animate: true });
-    } else if (mode === 'scene') map.setView(bounds.getCenter(), 17, { animate: true });
+    // משטח המפה ריבועי, ומרכזו הוא הנקודה שבה הרכב נראה על המסך — אז ממרכזים ישר על הרכב
+    if (mode === 'follow') map.setView([pos.lat, pos.lng], FOLLOW_ZOOM, { animate: true });
+    else if (mode === 'scene') map.setView(bounds.getCenter(), 17, { animate: true });
     else {
-      // המשטח המוטה גדול מהמסגרת — המסלול צריך להיכנס לחלק התחתון-מרכזי שלו, שהוא מה שנראה
+      // המסלול צריך להיכנס לחלק שנראה: מעל מרכז המשטח, ולא רחב מדי
       const { x, y } = map.getSize();
-      map.fitBounds(bounds, { paddingTopLeft: [x * 0.36, y * 0.62], paddingBottomRight: [x * 0.36, y * 0.1], maxZoom: 16, animate: false });
+      map.fitBounds(bounds, { paddingTopLeft: [x / 2 - 420, y / 2 - 760], paddingBottomRight: [x / 2 - 420, y / 2 - 40], maxZoom: 16, animate: false });
     }
   }, [mode, key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
@@ -182,10 +181,16 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
   const speed = driving && left > 0.02 ? UNIT_SPEED_KMH[v.type] : 0;
   const nextName = next.type === 'arrive' ? inc.address : next.name;
 
+  // בנסיעה המפה מסתובבת כך שכיוון הנסיעה תמיד למעלה (כמו ב-Waze). הזווית נצברת, כדי שמעבר 359°→1° לא יסובב סיבוב שלם
+  const spin = useRef(0);
+  const target = driving ? -me.bearing : 0;
+  spin.current += ((((target - spin.current) % 360) + 540) % 360) - 180;
+
   return (
     <section className="mdt-nav waze">
       {/* המפה מוטה לאחור (מבט נהג) — גדולה מהמסגרת כדי למלא אותה גם אחרי ההטיה */}
       <div className="mdt-nav-tilt">
+       <div className="mdt-nav-spin" style={{ transform: `rotate(${spin.current}deg)`, '--unspin': `${-spin.current}deg` } as React.CSSProperties}>
         <MapContainer center={[inc.pos.lat, inc.pos.lng]} zoom={14} zoomControl={false} attributionControl={false}>
           <TileLayer url={TILES} maxZoom={19} />
           <Camera mode={driving ? 'follow' : arrived ? 'scene' : 'overview'} pos={me.pos} bounds={bounds} />
@@ -202,6 +207,7 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
           ))}
           <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(me.bearing)} zIndexOffset={500} />
         </MapContainer>
+       </div>
       </div>
 
       <div className="mdt-nav-top">

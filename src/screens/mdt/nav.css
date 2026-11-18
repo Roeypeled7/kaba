@@ -3,6 +3,8 @@
 
 /* המפה מוטה לאחור כמו מבט נהג. המשטח גדול מהמסגרת כדי שימלא אותה גם אחרי ההטיה */
 .mdt-nav-tilt { position: absolute; left: -90%; right: -90%; top: -230%; bottom: -4%; transform: perspective(1100px) rotateX(50deg); transform-origin: 50% 100%; }
+/* משטח המפה: ריבוע גדול שמרכזו בנקודה שבה הרכב נראה (שליש תחתון), ומסתובב סביבה לפי כיוון הנסיעה */
+.mdt-nav-spin { position: absolute; left: 50%; top: 80%; width: 2600px; height: 2600px; margin: -1300px 0 0 -1300px; transition: transform 0.7s linear; }
 .mdt-nav.waze .leaflet-container { position: absolute; inset: 0; width: 100%; height: 100%; background: #1c2733; }
 /* אריחים כהים בגוון כחול-פלדה */
 .mdt-nav.waze .leaflet-tile-pane { filter: invert(1) brightness(2.1) contrast(0.88) sepia(0.8) hue-rotate(172deg) saturate(1); }
@@ -15,7 +17,7 @@
 
 /* תווית שם רחוב על המסלול */
 .mdt-nav-street {
-  position: absolute; transform: translate(-50%, -135%); white-space: nowrap; background: #17799e; color: #fff; font-size: 34px; font-weight: 800; line-height: 1.2;
+  position: absolute; transform: rotate(var(--unspin, 0deg)) translate(-50%, -135%); transform-origin: 0 0; white-space: nowrap; background: #17799e; color: #fff; font-size: 34px; font-weight: 800; line-height: 1.2;
   padding: 6px 14px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
 }
 

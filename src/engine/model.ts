@@ -285,6 +285,8 @@ export type Command =
   | { type: 'dropCall'; callId: string }
   | { type: 'dispatchRecommended'; incidentId: string }
   | { type: 'dispatchUnits'; incidentId: string; vehicleIds: string[] }
+  /** הזנקת תרגול מהטאבלט: אירוע חדש ליד התחנה שהרכב הזה מוזנק אליו מיד */
+  | { type: 'drill'; vehicleId: string }
   | { type: 'reinforce'; incidentId: string; unitType: UnitType }
   | { type: 'setSeverity'; incidentId: string; severity: 1 | 2 | 3 }
   | { type: 'releaseUnit'; vehicleId: string }

@@ -57,6 +57,11 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
               {actLabel}
             </button>
           )}
+          {v.status === 'available' && (
+            <button className="mdt-btn big" onClick={() => send({ type: 'drill', vehicleId: v.id })}>
+              🚨 הזנקת תרגול
+            </button>
+          )}
         </section>
         <section className="mdt-panel side">
           <div className="mdt-panel-h">ערוץ {stationShort(st)}</div>

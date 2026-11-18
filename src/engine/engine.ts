@@ -1,4 +1,4 @@
-import { AMBULANCE_SPEED_KMH, BREAK_REASON, DEFAULT_SPEED, DESK_LABEL, DISTRICT, INCIDENT_TYPE, SESSION_TIMING, TABLET_TIMING, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
+import { ADDRESSES, AMBULANCE_SPEED_KMH, BREAK_REASON, DEFAULT_SPEED, DESK_LABEL, DISTRICT, INCIDENT_TYPE, SESSION_TIMING, TABLET_TIMING, TIMING, UNIT_LABEL, UNIT_SPEED_KMH, buildWorld } from './config';
 import { describeCommand } from './audit';
 import { applyRotation, assignTeams, distKm, mainStationId, nearestHospital, needDelta, recommend, requirement, type Need } from './dispatch';
 import { etaMin, makeCall, moveToward, nextCallDelayMs } from './simulation';
@@ -511,6 +511,25 @@ export class Engine {
       case 'dropCall':
         s.calls = s.calls.filter((c) => c.id !== cmd.callId);
         break;
+      case 'drill': {
+        const v = this.vehicle(cmd.vehicleId);
+        if (!v || v.status !== 'available') break;
+        // אירוע אקראי באחת הכתובות הקרובות לתחנה (לא ממש בפתח שלה), והרכב הזה — רק הוא — מוזנק אליו
+        const from = this.station(v.stationId).pos;
+        const near = ADDRESSES.map((a) => ({ a, d: distKm(from, a.pos) }))
+          .filter((x) => x.d > 1.5)
+          .sort((x, y) => x.d - y.d)
+          .slice(0, 4);
+        const pick = near[Math.floor(Math.random() * near.length)]?.a;
+        if (!pick) break;
+        const call = makeCall('drill', this.now);
+        const auto = s.autoDispatch;
+        s.autoDispatch = false;
+        this.run({ type: 'openIncident', typeKey: call.typeKey, severity: 1, address: pick.name, site: call.site, pos: pick.pos, caller: call.caller, phone: call.phone, notes: call.description });
+        s.autoDispatch = auto;
+        this.dispatch(s.incidents[s.incidents.length - 1], assignTeams(s, [v.id]));
+        break;
+      }
       case 'dispatchRecommended': {
         const inc = this.incident(cmd.incidentId);
         if (inc && inc.status === 'new') this.autoDispatch(inc, requirement(inc.typeKey, inc.severity));

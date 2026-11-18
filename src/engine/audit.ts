@@ -33,6 +33,8 @@ export function describeCommand(s: SimState, cmd: Command): { text: string; inci
       const c = s.calls.find((x) => x.id === cmd.callId);
       return { text: `ניתוק קריאה ${cmd.callId}${c ? ` — ${c.caller}, ${INCIDENT_TYPE[c.typeKey]?.label ?? ''}` : ''}` };
     }
+    case 'drill':
+      return { text: `הזנקת תרגול מהטאבלט: ${sign(cmd.vehicleId)}` };
     case 'dispatchRecommended':
       return { text: `שיגור לפי המלצה · אירוע ${cmd.incidentId}`, incidentId: cmd.incidentId };
     case 'dispatchUnits':
