@@ -108,26 +108,18 @@ const fmtDist = (km: number) => (km < 1 ? `${Math.max(10, Math.round((km * 1000)
 
 const meIcon = (bearing: number) =>
   L.divIcon({ className: '', html: `<div class="mdt-nav-me" style="transform: rotate(${bearing}deg)"><i></i></div>`, iconSize: [84, 84], iconAnchor: [42, 42] });
-const streetIcon = (name: string) => L.divIcon({ className: '', html: `<div class="mdt-nav-street">${name.replace(/[<>&]/g, '')}</div>`, iconSize: [0, 0], iconAnchor: [0, 0] });
 
 /** מפת בסיס כהה ונקייה (Esri Dark Gray): רקע כהה, כבישים בהירים ושמות רחובות — הגוון הכחלחל של Waze נעשה ב-CSS (nav.css) */
 const TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 const FOLLOW_ZOOM = 17;
 
-/** בנסיעה — המפה עוקבת אחרי הרכב מקרוב, והרכב בשליש התחתון; לפני היציאה — המסלול כולו; אחרי ההגעה — הזירה */
-function Camera({ mode, pos, bounds }: { mode: 'follow' | 'overview' | 'scene'; pos: LatLng; bounds: L.LatLngBounds }) {
+/** המפה תמיד ממורכזת על הרכב. משטח המפה ריבועי ומרכזו הוא הנקודה שבה הרכב נראה על המסך */
+function Camera({ pos }: { pos: LatLng }) {
   const map = useMap();
-  const key = mode === 'follow' ? `${pos.lat.toFixed(5)},${pos.lng.toFixed(5)}` : bounds.toBBoxString();
+  const key = `${pos.lat.toFixed(5)},${pos.lng.toFixed(5)}`;
   useEffect(() => {
-    // משטח המפה ריבועי, ומרכזו הוא הנקודה שבה הרכב נראה על המסך — אז ממרכזים ישר על הרכב
-    if (mode === 'follow') map.setView([pos.lat, pos.lng], FOLLOW_ZOOM, { animate: true });
-    else if (mode === 'scene') map.setView(bounds.getCenter(), 17, { animate: true });
-    else {
-      // המסלול צריך להיכנס לחלק שנראה: מעל מרכז המשטח, ולא רחב מדי
-      const { x, y } = map.getSize();
-      map.fitBounds(bounds, { paddingTopLeft: [x / 2 - 230, y / 2 - 520], paddingBottomRight: [x / 2 - 230, y / 2 - 30], maxZoom: 16, animate: false });
-    }
-  }, [mode, key]); // eslint-disable-line react-hooks/exhaustive-deps
+    map.setView([pos.lat, pos.lng], FOLLOW_ZOOM, { animate: true });
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -169,21 +161,19 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
   const line = route.pts.map((p) => [p.lat, p.lng] as [number, number]);
   const cut = route.cum.findIndex((c) => c > done);
   const ahead: [number, number][] = [[me.pos.lat, me.pos.lng], ...line.slice(cut < 0 ? line.length : cut)];
-  const bounds = useMemo(() => (arrived ? L.latLngBounds([inc.pos.lat, inc.pos.lng], [inc.pos.lat, inc.pos.lng]) : L.latLngBounds(line)), [arrived, route]); // eslint-disable-line react-hooks/exhaustive-deps
   const others = state.vehicles.filter((x) => x.incidentId === inc.id && x.id !== v.id);
 
-  // שמות הרחובות הבאים על המסלול — תוויות כמו ב-Waze
-  const streets: { name: string; at: LatLng }[] = [];
-  for (let i = idx + 1; i < route.steps.length && streets.length < 3; i++) {
-    const st2 = route.steps[i];
-    if (st2.name && st2.at && st2.type !== 'arrive' && !streets.some((x) => x.name === st2.name)) streets.push({ name: st2.name, at: st2.at });
-  }
   const speed = driving && left > 0.02 ? UNIT_SPEED_KMH[v.type] : 0;
   const nextName = next.type === 'arrive' ? inc.address : next.name;
 
-  // בנסיעה המפה מסתובבת כך שכיוון הנסיעה תמיד למעלה (כמו ב-Waze). הזווית נצברת, כדי שמעבר 359°→1° לא יסובב סיבוב שלם
+  // כיוון הדרך שלפני הרכב: מהמיקום שלו אל נקודה 40 מ׳ קדימה על המסלול (יציב יותר ממקטע בודד); בסוף המסלול — כיוון המקטע האחרון
+  const fwd = along(route, done + 0.04).pos;
+  const heading =
+    route.total - done > 0.005 ? (Math.atan2((fwd.lng - me.pos.lng) * Math.cos((me.pos.lat * Math.PI) / 180), fwd.lat - me.pos.lat) * 180) / Math.PI : me.bearing;
+  // המפה תמיד מסובבת כך שהדרך שלפני הרכב פונה למעלה והחץ מצביע למעלה — גם לפני היציאה (כמו ב-Waze).
+  // הזווית נצברת, כדי שמעבר 359°→1° לא יסובב סיבוב שלם
   const spin = useRef(0);
-  const target = driving ? -me.bearing : 0;
+  const target = -heading;
   spin.current += ((((target - spin.current) % 360) + 540) % 360) - 180;
 
   return (
@@ -205,19 +195,18 @@ export default function Nav({ ctx, inc }: { ctx: Ctx; inc: Incident }) {
           boxZoom={false}
         >
           <TileLayer url={TILES} maxZoom={19} maxNativeZoom={16} />
-          <Camera mode={driving ? 'follow' : arrived ? 'scene' : 'overview'} pos={me.pos} bounds={bounds} />
+          <Camera pos={me.pos} />
           {!arrived && (
             <>
               <Polyline positions={ahead} pathOptions={{ color: '#0e86b8', weight: 34, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }} />
               <Polyline positions={ahead} pathOptions={{ color: '#2fd6ff', weight: 24, lineCap: 'round', lineJoin: 'round' }} />
             </>
           )}
-          {!arrived && streets.map((x) => <Marker key={x.name} position={[x.at.lat, x.at.lng]} icon={streetIcon(x.name)} interactive={false} />)}
           <Marker position={[inc.pos.lat, inc.pos.lng]} icon={incidentIcon(inc, true)} />
           {others.map((x) => (
             <Marker key={x.id} position={[x.pos.lat, x.pos.lng]} icon={vehicleIcon(x)} />
           ))}
-          <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(me.bearing)} zIndexOffset={500} />
+          <Marker position={[me.pos.lat, me.pos.lng]} icon={meIcon(heading)} zIndexOffset={500} />
         </MapContainer>
        </div>
       </div>

@@ -16,12 +16,6 @@
 .mdt-nav-me::before { width: 78px; height: 84px; background: #fff; }
 .mdt-nav-me i { width: 58px; height: 62px; margin-top: 2px; background: #19b6d8; }
 
-/* תווית שם רחוב על המסלול */
-.mdt-nav-street {
-  position: absolute; transform: rotate(var(--unspin, 0deg)) translate(-50%, -135%); transform-origin: 0 0; white-space: nowrap; background: #17799e; color: #fff; font-size: 34px; font-weight: 800; line-height: 1.2;
-  padding: 6px 14px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-}
-
 /* פס ההוראה: שחור, חץ לבן גדול, מרחק בגדול */
 .mdt-nav.waze .mdt-nav-top { top: 0; right: 0; left: 0; border-radius: 0; background: #000; padding: 14px 22px; gap: 20px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); }
 .mdt-nav.waze .mdt-nav-arrow { width: 64px; height: 64px; background: none; color: #fff; font-size: 60px; line-height: 1; border-radius: 0; }
