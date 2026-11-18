@@ -274,15 +274,6 @@
 .mdt-inc-meta { margin-inline-start: auto; display: flex; align-items: baseline; gap: 12px; font-size: 18px; font-weight: 700; flex: none; }
 .mdt-inc-addr { margin-top: 6px; font-size: 28px; font-weight: 800; line-height: 1.2; color: var(--mdt-amber); }
 /* דף פרטי האירוע: עמודת תוויות צרה ועמודת ערכים */
-.mdt-inc-sheet {
-  display: grid; grid-template-columns: max-content 1fr; margin: 14px 0 0; padding: 2px 14px;
-  background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px;
-}
-.mdt-inc-sheet dt, .mdt-inc-sheet dd { margin: 0; padding: 9px 0; border-top: 1px solid var(--mdt-line); }
-.mdt-inc-sheet dt { padding-inline-end: 18px; font-size: 13px; font-weight: 700; color: var(--mdt-dim); line-height: 24px; }
-.mdt-inc-sheet dd { font-size: 17px; line-height: 24px; min-width: 0; overflow-wrap: anywhere; }
-.mdt-inc-sheet dt:first-of-type, .mdt-inc-sheet dt:first-of-type + dd { border-top: 0; }
-.mdt-inc-tel { color: inherit; text-decoration: none; direction: ltr; unicode-bidi: isolate; }
 .mdt-eta { font-size: 18px; color: #ccc; }
 .mdt-eta b { font-size: 26px; color: #fff; }
 .mdt-log { font-size: 14px; display: flex; flex-direction: column; gap: 4px; color: #ddd; }
@@ -420,7 +411,7 @@
 .mdt-nav { flex: 1; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--mdt-line); background: #e8e6e1; min-width: 0; }
 .mdt-nav .leaflet-container { position: absolute; inset: 0; width: 100%; height: 100%; background: #e8e6e1; }
 .mdt-nav .leaflet-tile-pane { filter: saturate(0.9); }
-/* מראה Waze: מסלול תכלת, פס הוראה כחול-כהה למעלה, פס הגעה לבן למטה */
+/* פס הוראה כחול-כהה מעל מפת Waze */
 .mdt-nav-top {
   position: absolute; top: 12px; right: 12px; left: 12px; z-index: 500; display: flex; align-items: center; gap: 14px;
   background: #1f3b57; color: #fff; border-radius: 16px; padding: 12px 16px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
@@ -429,18 +420,6 @@
 .mdt-nav-arrow { width: 54px; height: 54px; border-radius: 50%; background: #33ccff; color: #0b2233; display: grid; place-items: center; font-size: 30px; flex: none; }
 .mdt-nav-dest { font-size: 24px; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mdt-nav-sub { font-size: 14px; color: #a9c4dc; margin-top: 2px; }
-.mdt-waze-btn { flex: none; background: #33ccff; color: #0b2233; font-weight: 800; font-size: 16px; padding: 12px 16px; border-radius: 24px; text-decoration: none; }
-.mdt-waze-btn:active { transform: scale(0.97); }
-.mdt-nav-bottom {
-  position: absolute; bottom: 12px; right: 12px; left: 12px; z-index: 500; display: flex; align-items: center; gap: 18px;
-  background: #fff; color: #1d2733; border-radius: 16px; padding: 12px 18px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
-}
-.mdt-nav-eta { display: flex; align-items: baseline; gap: 6px; }
-.mdt-nav-eta b { font-size: 56px; line-height: 1; color: #1d2733; }
-.mdt-nav-eta span { font-size: 18px; color: #66717d; }
-.mdt-nav-stats { display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
-.mdt-nav-stats b { font-size: 20px; }
-.mdt-nav-stats .dim { color: #66717d; }
 
 .mdt-update.fresh { border-color: var(--mdt-fire); box-shadow: 0 0 0 2px color-mix(in srgb, var(--mdt-fire) 40%, transparent); animation: mdt-fresh 1s ease-out 2; }
 @keyframes mdt-fresh { 50% { background: color-mix(in srgb, var(--mdt-fire) 25%, var(--mdt-card)); } }
@@ -457,5 +436,12 @@
 .mdt-lightbox-cap { color: #fff; font-size: 17px; text-align: center; }
 .mdt-lightbox-cap .mono { color: var(--mdt-dim); }
 
-/* מפת Waze חיה במסך האירוע */
-.mdt-waze { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+/* ── פרטי האירוע: מה קרה + כתובת מדויקת (קומה / דירה / קוד) ── */
+.mdt-inc-lbl { display: block; font-size: 13px; font-weight: 700; color: var(--mdt-dim); margin-bottom: 4px; }
+.mdt-inc-what { background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px; padding: 12px 14px; font-size: 22px; font-weight: 700; line-height: 1.3; margin-top: 10px; }
+.mdt-inc-where { background: var(--mdt-card); border: 1px solid var(--mdt-line); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+.mdt-inc-where .mdt-inc-addr { margin-top: 0; }
+.mdt-inc-site { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 10px; margin-top: 12px; }
+.mdt-inc-site > div { background: var(--mdt-bg-2); border: 1px solid var(--mdt-line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mdt-inc-site span { font-size: 13px; color: var(--mdt-dim); }
+.mdt-inc-site b { font-size: 30px; line-height: 1.1; color: #fff; }

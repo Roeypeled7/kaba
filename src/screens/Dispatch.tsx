@@ -3,9 +3,9 @@ import { CircleMarker, MapContainer, Marker, useMapEvents } from 'react-leaflet'
 import { ADDRESSES, AMB_STATUS_LABEL, DISTRICT, INCIDENT_TYPE, INCIDENT_TYPES, UNIT_LABEL, UNIT_SPEED_KMH } from '../engine/config';
 import { recommend, requirement } from '../engine/dispatch';
 import { etaMin } from '../engine/simulation';
-import type { Assignment, Command, Incident, IncomingCall, LatLng, SimState, UnitType, Vehicle } from '../engine/model';
+import type { Assignment, Command, Incident, IncomingCall, LatLng, SimState, SiteAccess, UnitType, Vehicle } from '../engine/model';
 import { DarkTiles, FitDistrict, FlyTo, incidentIcon, pinIcon, vehicleIcon } from '../components/mapkit';
-import { IncidentBadge, IncidentTitle, SimControls, TopBar, UnitTag, fmtElapsed, fmtHM, teamUnit } from '../components/ui';
+import { IncidentBadge, IncidentTitle, SimControls, TopBar, UnitTag, fmtElapsed, fmtHM, siteLine, teamUnit } from '../components/ui';
 import { SceneMedia } from '../components/scene';
 import { playRing, useSoundLoop } from '../sound';
 
@@ -28,9 +28,21 @@ interface Draft {
   caller: string;
   phone: string;
   notes: string;
+  floor: string;
+  apartment: string;
+  entryCode: string;
 }
 
-const emptyDraft = (): Draft => ({ typeKey: 'structure', severity: 1, address: '', pos: null, caller: '', phone: '', notes: '' });
+/** קומה / דירה / קוד — רק מה שמולא */
+function site(d: Draft): SiteAccess | undefined {
+  const s: SiteAccess = {};
+  if (d.floor.trim()) s.floor = d.floor.trim();
+  if (d.apartment.trim()) s.apartment = d.apartment.trim();
+  if (d.entryCode.trim()) s.entryCode = d.entryCode.trim();
+  return Object.keys(s).length ? s : undefined;
+}
+
+const emptyDraft = (): Draft => ({ typeKey: 'structure', severity: 1, address: '', pos: null, caller: '', phone: '', notes: '', floor: '', apartment: '', entryCode: '' });
 
 export default function Dispatch({ state, send }: { state: SimState; send: Send }) {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -39,7 +51,7 @@ export default function Dispatch({ state, send }: { state: SimState; send: Send 
 
   const accept = (c: IncomingCall) => {
     const a = ADDRESSES[c.addressIdx];
-    setDraft({ callId: c.id, typeKey: c.typeKey, severity: 1, address: a.name, pos: a.pos, caller: c.caller, phone: c.phone, notes: c.description });
+    setDraft({ callId: c.id, typeKey: c.typeKey, severity: 1, address: a.name, pos: a.pos, caller: c.caller, phone: c.phone, notes: c.description, floor: c.site?.floor ?? '', apartment: c.site?.apartment ?? '', entryCode: c.site?.entryCode ?? '' });
   };
 
   const active = state.incidents.filter((i) => i.status !== 'closed').reverse();
@@ -159,6 +171,7 @@ function IncidentForm({ state, send, draft, setDraft }: { state: SimState; send:
       typeKey: draft.typeKey,
       severity: draft.severity,
       address: draft.address,
+      site: site(draft),
       pos: draft.pos,
       caller: draft.caller || 'לא ידוע',
       phone: draft.phone || '—',
@@ -203,6 +216,11 @@ function IncidentForm({ state, send, draft, setDraft }: { state: SimState; send:
         ))}
       </select>
       <input placeholder="כתובת" value={draft.address} onChange={(e) => set({ address: e.target.value })} />
+      <div className="row gap">
+        <input placeholder="קומה" value={draft.floor} onChange={(e) => set({ floor: e.target.value })} />
+        <input placeholder="דירה" value={draft.apartment} onChange={(e) => set({ apartment: e.target.value })} />
+        <input placeholder="קוד לבניין" value={draft.entryCode} onChange={(e) => set({ entryCode: e.target.value })} className="mono" />
+      </div>
       <div className="row gap">
         <input placeholder="שם המתקשר" value={draft.caller} onChange={(e) => set({ caller: e.target.value })} />
         <input placeholder="טלפון" value={draft.phone} onChange={(e) => set({ phone: e.target.value })} className="mono" />
@@ -285,7 +303,8 @@ export function IncidentCard({ inc, state, send }: { inc: Incident; state: SimSt
         <span className="mono dim push">{fmtElapsed(state.simTime - inc.openedAt)}</span>
       </div>
       <div className="inc-addr">
-        📍 {inc.address} <span className="dim">· {inc.caller} {inc.phone}</span>
+        📍 {inc.address}
+        {siteLine(inc.site) && <b> · {siteLine(inc.site)}</b>} <span className="dim">· {inc.caller} {inc.phone}</span>
       </div>
       {inc.notes && <div className="inc-notes">“{inc.notes}”</div>}
       <div className="progress">

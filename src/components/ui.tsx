@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AMB_STATUS_LABEL, CALL_RATE_LABEL, DISTRICT, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, ROLE_LABEL, STATUS_LABEL, UNIT_LABEL } from '../engine/config';
 import { STATIONS_GEO } from '../engine/geo';
-import type { Ambulance, CallRate, Command, Incident, SimState, Station, TeamId, Vehicle } from '../engine/model';
+import type { Ambulance, CallRate, Command, Incident, SimState, SiteAccess, Station, TeamId, Vehicle } from '../engine/model';
 import { BASE, appPath, navigate } from '../router';
 import { unlockAudio, useAudioReady } from '../sound';
 import { OperatorMenu } from './session';
@@ -116,6 +116,9 @@ export function teamOut(vehicles: Vehicle[], stationId: number, team: TeamId): b
     (v) => v.stationId === stationId && v.type !== 'commander' && v.crewTeam === team && v.status !== 'available' && v.status !== 'offline',
   );
 }
+
+/** "קומה 3 · דירה 12 · קוד 1234#" — רק מה שידוע */
+export const siteLine = (s?: SiteAccess) => (s ? [s.floor && `קומה ${s.floor}`, s.apartment && `דירה ${s.apartment}`, s.entryCode && `קוד ${s.entryCode}`].filter(Boolean).join(' · ') : '');
 
 /** הפעולה הבאה של רכב לפי הסטטוס שלו — משותף לעמדת התחנה ולטאבלט */
 export const VEHICLE_ACTIONS: Partial<Record<Vehicle['status'], { action: 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online'; label: string; cls: string }>> = {

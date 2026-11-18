@@ -108,11 +108,20 @@ export interface IncidentUpdate {
 
 export type IncidentStatus = 'new' | 'dispatched' | 'active' | 'controlled' | 'closed';
 
+/** פרטי גישה בתוך הבניין — מה שהצוות צריך כדי להגיע לדלת */
+export interface SiteAccess {
+  floor?: string;
+  apartment?: string;
+  /** קוד הכניסה לבניין */
+  entryCode?: string;
+}
+
 export interface Incident {
   id: string;
   typeKey: string;
   severity: 1 | 2 | 3;
   address: string;
+  site?: SiteAccess;
   pos: LatLng;
   caller: string;
   phone: string;
@@ -141,6 +150,7 @@ export interface IncomingCall {
   typeKey: string;
   addressIdx: number;
   description: string;
+  site?: SiteAccess;
 }
 
 export interface Assignment {
@@ -266,6 +276,7 @@ export type Command =
       typeKey: string;
       severity: 1 | 2 | 3;
       address: string;
+      site?: SiteAccess;
       pos: LatLng;
       caller: string;
       phone: string;

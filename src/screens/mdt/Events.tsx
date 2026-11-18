@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { AMB_STATUS_LABEL, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL, UNIT_SPEED_KMH } from '../../engine/config';
-import { distKm } from '../../engine/dispatch';
-import { etaMin } from '../../engine/simulation';
+import { AMB_STATUS_LABEL, INCIDENT_STATUS_LABEL, INCIDENT_TYPE, STATUS_LABEL } from '../../engine/config';
 import type { Incident, IncidentUpdate, Vehicle } from '../../engine/model';
 import { SceneMedia } from '../../components/scene';
 import { VEHICLE_ACTIONS, fmtElapsed, fmtHM, stationShort } from '../../components/ui';
 import { playPing } from '../../sound';
 import { fmtDate, unitFeed, type Ctx } from './shared';
+import Nav from './Nav';
 
 /** תוויות הכפתור הראשי בטאבלט — קצרות יותר מבמסך התחנה; הפעולה עצמה נשארת של VEHICLE_ACTIONS */
 const TABLET_LABEL: Partial<Record<Vehicle['status'], string>> = {
@@ -70,9 +69,6 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
   const t = INCIDENT_TYPE[inc.typeKey];
   const others = state.vehicles.filter((x) => x.incidentId === inc.id && x.id !== v.id);
   const ambs = state.ambulances.filter((a) => inc.ambulanceIds.includes(a.id) && a.incidentId === inc.id);
-  const km = distKm(v.pos, inc.pos);
-  const driving = v.status === 'enroute' || v.status === 'dispatched';
-  const eta = etaMin(v.pos, inc.pos, UNIT_SPEED_KMH[v.type]);
   const updates = [...inc.updates].reverse();
 
   return (
@@ -90,31 +86,33 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
               <span className="mono">{fmtElapsed(state.simTime - inc.openedAt)}</span>
             </span>
           </div>
-          <div className="mdt-inc-addr">📍 {inc.address}</div>
-
-          {/* דף פרטים: תווית מימין, ערך משמאל */}
-          <dl className="mdt-inc-sheet">
-            {inc.notes && (
-              <>
-                <dt>תיאור</dt>
-                <dd>{inc.notes}</dd>
-              </>
+          {/* מה קרה — ואיפה בדיוק: כתובת, קומה, דירה וקוד הכניסה */}
+          {inc.notes && (
+            <div className="mdt-inc-what">
+              <span className="mdt-inc-lbl">מה קרה</span>
+              {inc.notes}
+            </div>
+          )}
+          <div className="mdt-inc-where">
+            <span className="mdt-inc-lbl">כתובת</span>
+            <div className="mdt-inc-addr">📍 {inc.address}</div>
+            {inc.site && (
+              <div className="mdt-inc-site">
+                <div>
+                  <span>קומה</span>
+                  <b className="mono">{inc.site.floor ?? '—'}</b>
+                </div>
+                <div>
+                  <span>דירה</span>
+                  <b className="mono">{inc.site.apartment ?? '—'}</b>
+                </div>
+                <div>
+                  <span>קוד לבניין</span>
+                  <b className="mono">{inc.site.entryCode ?? '—'}</b>
+                </div>
+              </div>
             )}
-            <dt>מדווח</dt>
-            <dd>{inc.caller}</dd>
-            <dt>טלפון</dt>
-            <dd>
-              <a className="mono mdt-inc-tel" href={`tel:${inc.phone}`}>
-                {inc.phone}
-              </a>
-            </dd>
-            <dt>סטטוס</dt>
-            <dd>
-              <span className={`mdt-inc-st i-${inc.status}`}>{INCIDENT_STATUS_LABEL[inc.status]}</span>
-            </dd>
-            <dt>נפתח</dt>
-            <dd className="mono">{fmtHM(inc.openedAt)}</dd>
-          </dl>
+          </div>
 
           <div className="mdt-sec-h">
             עדכונים מהזירה <span className="mdt-count">{inc.updates.length}</span>
@@ -175,53 +173,20 @@ function Current({ ctx, inc }: { ctx: Ctx; inc: Incident | undefined }) {
         {/* הכפתור הראשי — קבוע בתחתית הפאנל, תמיד מול העיניים */}
         {act && (
           <div className="mdt-details-foot">
-            <button className={`mdt-btn huge ${act.cls}`} onClick={() => send({ type: 'vehicleAction', vehicleId: v.id, action: act.action })}>
+            <button
+              className={`mdt-btn huge ${act.cls}`}
+              onClick={() => {
+                send({ type: 'vehicleAction', vehicleId: v.id, action: act.action });
+              }}
+            >
               {actLabel}
             </button>
           </div>
         )}
       </section>
 
-      {/* שמאל: ניווט */}
-      <section className="mdt-nav">
-        {/* מפת Waze חיה (עומסים ודיווחים בזמן אמת) ממורכזת על הזירה. ניווט קולי מלא נפתח באפליקציית Waze מהכפתור למעלה */}
-        <iframe
-          className="mdt-waze"
-          title="Waze"
-          src={`https://embed.waze.com/iframe?zoom=15&lat=${inc.pos.lat}&lon=${inc.pos.lng}&pin=1&desc=1`}
-          allow="geolocation"
-          allowFullScreen
-        />
-        <div className="mdt-nav-top">
-          <span className="mdt-nav-arrow">{driving ? '⬆' : '📍'}</span>
-          <div>
-            <div className="mdt-nav-dest">{inc.address}</div>
-            <div className="mdt-nav-sub">
-              {t.icon} {t.label} · {driving ? 'בדרך לזירה' : v.status === 'onscene' ? 'בזירה' : STATUS_LABEL[v.status]}
-            </div>
-          </div>
-          <a className="mdt-waze-btn" href={`https://waze.com/ul?ll=${inc.pos.lat},${inc.pos.lng}&navigate=yes`} target="_blank" rel="noreferrer">
-            נווט ב-Waze
-          </a>
-        </div>
-        <div className="mdt-nav-bottom">
-          <div className="mdt-nav-eta">
-            <b className="mono">{driving ? eta : v.status === 'onscene' || v.status === 'cleared' ? '✓' : '—'}</b>
-            <span>{driving ? 'דק׳' : v.status === 'onscene' || v.status === 'cleared' ? 'הגעתם' : ''}</span>
-          </div>
-          <div className="mdt-nav-stats">
-            <div>
-              <b className="mono">{km.toFixed(1)}</b> ק״מ
-            </div>
-            {driving && (
-              <div>
-                הגעה <b className="mono">{fmtHM(state.simTime + eta * 60_000)}</b>
-              </div>
-            )}
-            <div className="dim">{others.length ? `${others.length} כוחות נוספים בדרך` : 'רק הרכב שלכם'}</div>
-          </div>
-        </div>
-      </section>
+      {/* שמאל: ניווט בתוך המערכת */}
+      <Nav ctx={ctx} inc={inc} />
 
       {view?.media && (
         <div className="mdt-lightbox" onClick={() => setView(null)}>

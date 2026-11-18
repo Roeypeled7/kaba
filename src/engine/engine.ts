@@ -457,6 +457,7 @@ export class Engine {
           typeKey: cmd.typeKey,
           severity: cmd.severity,
           address: cmd.address,
+          site: cmd.site,
           pos: cmd.pos,
           caller: cmd.caller,
           phone: cmd.phone,

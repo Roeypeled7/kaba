@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { INCIDENT_TYPE } from '../../engine/config';
+import { siteLine } from '../../components/ui';
 import type { Ctx } from './shared';
 import './alarm.css';
 
@@ -47,6 +48,7 @@ export default function AlarmOverlay({ ctx, dispatchIds }: { ctx: Ctx; dispatchI
                 <span className={`mdt-sev s${inc.severity}`}>חומרה {inc.severity}</span>
               </div>
               <div className="mdt-alert-addr">📍 {inc.address}</div>
+              {siteLine(inc.site) && <div className="mdt-alert-site">{siteLine(inc.site)}</div>}
               {notes && (
                 <div className="mdt-alert-notes">
                   <span className="mdt-alert-cap">פרטי המודיע</span>

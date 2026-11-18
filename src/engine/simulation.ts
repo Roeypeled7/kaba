@@ -1,6 +1,6 @@
 import { ADDRESSES, CALL_RATE_MIN, INCIDENT_TYPES, randomName } from './config';
 import { distKm } from './dispatch';
-import type { CallRate, IncomingCall, LatLng } from './model';
+import type { CallRate, IncomingCall, LatLng, SiteAccess } from './model';
 
 /** מזיז נקודה לעבר יעד. מחזיר true כשהגיע. */
 export function moveToward(pos: LatLng, target: LatLng, kmh: number, dtSec: number): boolean {
@@ -35,6 +35,18 @@ function pickWeighted<T extends { weight: number }>(items: T[]): T {
   return items[items.length - 1];
 }
 
+/** אירוע בתוך בניין — המודיע מוסר קומה, דירה וקוד כניסה (לא תמיד את כולם) */
+function randomSite(typeKey: string): SiteAccess | undefined {
+  if (typeKey !== 'structure' && !(typeKey === 'rescue' && Math.random() < 0.6)) return undefined;
+  const floor = 1 + Math.floor(Math.random() * 9);
+  const n = () => Math.floor(Math.random() * 10);
+  return {
+    floor: String(floor),
+    apartment: String((floor - 1) * 4 + 1 + Math.floor(Math.random() * 4)),
+    entryCode: Math.random() < 0.8 ? `${n()}${n()}${n()}${n()}#` : undefined,
+  };
+}
+
 export function makeCall(id: string, t: number): IncomingCall {
   const type = pickWeighted(INCIDENT_TYPES);
   const phone = `05${Math.floor(Math.random() * 10)}-${String(Math.floor(1000000 + Math.random() * 8999999))}`;
@@ -46,5 +58,6 @@ export function makeCall(id: string, t: number): IncomingCall {
     typeKey: type.key,
     addressIdx: Math.floor(Math.random() * ADDRESSES.length),
     description: type.descriptions[Math.floor(Math.random() * type.descriptions.length)],
+    site: randomSite(type.key),
   };
 }
