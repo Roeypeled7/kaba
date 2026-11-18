@@ -89,6 +89,15 @@ export class Engine {
     this.state = initialState(now);
   }
 
+  /**
+   * שחזור מצב שנשמר לפני שהמנוע נסגר (רענון / סגירת כל החלונות).
+   * המנוע עצמו חדש: bootId חדש, כך שהחלונות נכנסים מחדש בשקט, והמוקדנים נרשמים מחדש דרכם.
+   */
+  restore(saved: SimState) {
+    this.state = { ...saved, bootId: this.state.bootId, operators: [] };
+    this.emit();
+  }
+
   subscribe(fn: (s: SimState) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);

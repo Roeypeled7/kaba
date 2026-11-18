@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { Engine } from './engine';
 import { hostAudit } from './audit';
+import { loadState, saveState } from './persist';
 
 declare const self: SharedWorkerGlobalScope;
 
@@ -17,6 +18,19 @@ setInterval(() => {
 engine.subscribe((state) => {
   for (const p of ports) p.postMessage({ type: 'state', state });
 });
+
+// מצב ההדמיה נשמר כל כמה שניות ומשוחזר כשהמנוע עולה מחדש — רענון לא מוחק אירועים פעילים
+let savedVersion = -1;
+let ready = false;
+loadState().then((saved) => {
+  if (saved) engine.restore(saved);
+  ready = true;
+});
+setInterval(() => {
+  if (!ready || engine.state.version === savedVersion) return;
+  savedVersion = engine.state.version;
+  void saveState(engine.state);
+}, 2000);
 
 // יומן המערכת — נשמר ב-IndexedDB ונשלח לכל החלונות כתוספות
 const auditLog = hostAudit(

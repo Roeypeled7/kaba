@@ -81,4 +81,18 @@ describe('מוקדנים ויומן מערכת', () => {
     expect(e.state.operators.map((o) => o.badge)).toEqual(['1111']);
     expect(log.at(-1)!.text).toContain('ניתוק ע״י א (1111)');
   });
+
+  it('שחזור מצב שמור — האירועים נשארים, המנוע מקבל bootId חדש והמוקדנים נרשמים מחדש', () => {
+    const { e } = setup();
+    e.apply({ type: 'login', badge: '1234', name: 'רועי', desk: '102', windowId: 'w1' });
+    e.apply({ type: 'openIncident', typeKey: 'structure', severity: 1, address: 'רחובות, הרצל 150', site: { floor: '3' }, pos: { lat: 31.89, lng: 34.81 }, caller: 'א', phone: '1', notes: '' }, { badge: '1234' });
+    const saved = structuredClone(e.state);
+    const fresh = new Engine(0);
+    fresh.restore(saved);
+    expect(fresh.state.incidents).toHaveLength(1);
+    expect(fresh.state.incidents[0].site?.floor).toBe('3');
+    expect(fresh.state.vehicles.some((v) => v.incidentId === fresh.state.incidents[0].id)).toBe(true);
+    expect(fresh.state.bootId).not.toBe(saved.bootId);
+    expect(fresh.state.operators).toHaveLength(0);
+  });
 });
