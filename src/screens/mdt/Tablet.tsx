@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { STATUS_LABEL, TABLET_TIMING } from '../../engine/config';
 import type { SimState, Vehicle } from '../../engine/model';
 import { fmtHM, mainStations, stationShort, subStations, byUnit } from '../../components/ui';
@@ -69,12 +69,19 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
   const subTitle = !v ? 'בחירת רכב' : !page ? 'מסך הבית' : segs[0] === 'checks' && segs[1] ? CHECK_TITLE[segs[1]] ?? page.title : page.title;
   const back = () => (!v ? (location.href = BASE) : segs.length > 1 ? go(segs.slice(0, -1).join('/')) : segs.length ? go('') : navigate(TABLET_ROOT));
 
-  // הזנקה שממתינה לאישור ושכוללת את הרכב הזה
-  const alarm = v ? state.dispatches.find((d) => !d.ack && d.vehicleIds.includes(v.id)) : undefined;
-  // הזנקה חדשה פותחת מיד את מסך האירוע המפוצל (ניווט + פרטים); חלון ההזנקה נשאר במרכז המסך עד האישור או היציאה
+  // ההזנקה של הרכב הזה, כל עוד הצוות שלו לא ראה אותה. כל טאבלט סוגר את החלון לעצמו —
+  // אישור בעמדת התחנה או בטאבלט של רכב אחר לא מעלים אותו מכאן
+  const alarm =
+    v && v.status === 'dispatched' ? state.dispatches.find((d) => d.incidentId === v.incidentId && d.vehicleIds.includes(v.id) && !d.seenBy?.includes(v.id)) : undefined;
+  // רכב עם אירוע פעיל נפתח ישר על מסך האירוע (ניווט + פרטים): כשהאירוע מגיע, וגם כשפותחים את הטאבלט במסך הבית באמצע אירוע
+  const incidentId = v?.incidentId ?? null;
+  const prevIncident = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (alarm && segs[0] !== 'events') go('events');
-  }, [alarm?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const first = prevIncident.current === undefined;
+    const changed = prevIncident.current !== incidentId;
+    prevIncident.current = incidentId;
+    if (incidentId && segs[0] !== 'events' && (first ? segs.length === 0 : changed)) go('events');
+  }, [incidentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // כל עוד הטאבלט פתוח הרכב לא יוצא ולא מגיע לבד — הצוות מדווח "יצאנו" ו"במקום"
   const vehicleId = v?.id;
@@ -137,7 +144,7 @@ export default function Tablet({ state, send, path }: { state: SimState; send: S
             {!ctx ? <Picker state={state} /> : page ? <page.Comp {...ctx} /> : <Home {...ctx} />}
           </main>
 
-          {ctx && alarm && <AlarmOverlay ctx={ctx} dispatchIds={state.dispatches.filter((d) => !d.ack && d.incidentId === alarm.incidentId).map((d) => d.id)} />}
+          {ctx && alarm && <AlarmOverlay ctx={ctx} dispatchIds={[alarm.id]} />}
 
           {drawer && (
             <>
@@ -220,6 +227,7 @@ function Picker({ state }: { state: SimState }) {
                 <span className={`mdt-pick-dot st-${x.status}`} />
                 <b className="mono">{x.unit}</b>
                 <span>{label(x)}</span>
+                {x.incidentId && <span className="mdt-pick-inc">באירוע #{x.incidentId}</span>}
               </a>
             ))}
           </div>

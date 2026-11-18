@@ -445,3 +445,6 @@
 .mdt-inc-site > div { background: var(--mdt-bg-2); border: 1px solid var(--mdt-line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .mdt-inc-site span { font-size: 13px; color: var(--mdt-dim); }
 .mdt-inc-site b { font-size: 30px; line-height: 1.1; color: #fff; }
+
+/* רכב שנמצא באירוע — מסומן במסך בחירת הרכב */
+.mdt-pick-inc { background: var(--mdt-fire); color: #fff; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; }

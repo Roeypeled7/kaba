@@ -166,7 +166,10 @@ export interface StationDispatch {
   team: TeamId | null;
   vehicleIds: string[];
   t: number;
+  /** התחנה אישרה את ההזנקה (בעמדת התחנה, או באחד הטאבלטים) */
   ack: boolean;
+  /** הרכבים שהצוות שלהם כבר ראה את ההזנקה בטאבלט — חלון ההזנקה נסגר לכל רכב בנפרד */
+  seenBy?: string[];
 }
 
 /** ערוץ לכל תחנה ראשית (`st1`…`st6`); תחנות משנה משדרות בערוץ של התחנה הראשית */
@@ -294,7 +297,7 @@ export type Command =
   /** המוקדן מעביר עדכון לכוחות (טקסט, ואפשר לצרף תמונה/סרטון שהתקבלו) */
   | { type: 'addUpdate'; incidentId: string; text: string; media?: IncidentMedia; from?: string }
   | { type: 'vehicleAction'; vehicleId: string; action: 'depart' | 'arrive' | 'clear' | 'home' | 'offline' | 'online' }
-  | { type: 'ackDispatch'; dispatchId: string }
+  | { type: 'ackDispatch'; dispatchId: string; vehicleId?: string }
   | { type: 'setTurnTeam'; stationId: number; team: TeamId }
   | { type: 'setVehicleCrew'; vehicleId: string; crew: CrewMember[] }
   | { type: 'sendRadio'; channel: ChannelId; to: string; text: string; incidentId?: string }

@@ -10,8 +10,8 @@ export default function AlarmOverlay({ ctx, dispatchIds }: { ctx: Ctx; dispatchI
   const inc = state.incidents.find((i) => i.id === v.incidentId);
   const t = inc ? INCIDENT_TYPE[inc.typeKey] : undefined;
   const units = inc ? state.vehicles.filter((x) => x.incidentId === inc.id) : [];
-  // היציאה מאשרת את ההזנקה מול המוקד, וזה מה שסוגר את החלון — אין מצב מקומי נפרד
-  const ack = () => dispatchIds.forEach((id) => send({ type: 'ackDispatch', dispatchId: id }));
+  // היציאה מאשרת את ההזנקה מול המוקד ומסמנת שהרכב הזה ראה אותה — החלון נסגר רק בטאבלט הזה, לא אצל שאר הרכבים
+  const ack = () => dispatchIds.forEach((id) => send({ type: 'ackDispatch', dispatchId: id, vehicleId: v.id }));
 
   // Escape = יציאה. ה-ref שומר על ack עדכני בלי לרשום את המאזין מחדש בכל רינדור
   const ackRef = useRef(ack);

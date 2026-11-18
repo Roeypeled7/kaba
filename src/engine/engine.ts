@@ -603,7 +603,9 @@ export class Engine {
       }
       case 'ackDispatch': {
         const d = s.dispatches.find((x) => x.id === cmd.dispatchId);
-        if (d) d.ack = true;
+        if (!d) break;
+        d.ack = true;
+        if (cmd.vehicleId && !d.seenBy?.includes(cmd.vehicleId)) d.seenBy = [...(d.seenBy ?? []), cmd.vehicleId];
         break;
       }
       case 'setTurnTeam': {
